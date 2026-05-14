@@ -101,8 +101,9 @@ html,body{font-family:'Pretendard',-apple-system,sans-serif;background:var(--g05
 .gantt-toggle{width:16px;border:none;background:none;color:var(--g5);font-size:10px;cursor:pointer;flex-shrink:0;}
 .gantt-subtask-text{font-size:11px;color:var(--g6);}
 .gantt-subtask-text.done{color:var(--g4);text-decoration:line-through;}
+.gantt-subtask-text.pending{color:var(--g4);}
 .gantt-task-owners{display:flex;gap:2px;flex-shrink:0;}
-.owner-chip{width:18px;height:18px;border-radius:50%;background:var(--g2);color:var(--g7);font-size:9px;display:flex;align-items:center;justify-content:center;font-weight:600;cursor:default;}
+.owner-chip{width:18px;height:18px;border-radius:50%;background:var(--g5);color:var(--white);font-size:9px;display:flex;align-items:center;justify-content:center;font-weight:600;cursor:default;}
 .gantt-timeline{flex:1;position:relative;display:flex;}
 .gantt-day{flex:1;min-width:24px;border-right:1px solid var(--border-soft);}
 .gantt-day.weekend,.gantt-day.holiday{background:var(--g1);}
@@ -122,6 +123,9 @@ html,body{font-family:'Pretendard',-apple-system,sans-serif;background:var(--g05
 .gantt-bar.completed::before{content:'✓ ';}
 .gantt-bar.in-progress{}
 .gantt-bar.in-progress::after{content:'';position:absolute;left:0;top:0;bottom:0;background:rgba(255,255,255,0.25);width:var(--progress,0%);}
+.subtask-bar{top:8px;bottom:8px;font-size:9px;background:#8b9bb4;color:var(--white);opacity:.9;box-shadow:none;}
+.subtask-bar::after{content:'';position:absolute;left:0;top:0;bottom:0;background:rgba(255,255,255,0.35);width:var(--progress,0%);}
+.subtask-check-marker{position:absolute;top:50%;width:16px;height:16px;border-radius:50%;background:#16a34a;color:var(--white);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;transform:translate(-50%,-50%);box-shadow:0 0 0 2px var(--white);}
 
 .gantt-milestone{position:absolute;top:50%;width:9px;height:9px;background:var(--black);transform:translate(-50%,-50%) rotate(45deg);box-shadow:0 0 0 1px var(--white);cursor:pointer;z-index:2;}
 .gantt-milestone.critical{background:var(--red);}
@@ -172,7 +176,7 @@ html,body{font-family:'Pretendard',-apple-system,sans-serif;background:var(--g05
 .member-card:hover{border-color:var(--g3);}
 .member-card.editing{border-color:var(--red);}
 .member-head{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
-.member-avatar{width:32px;height:32px;border-radius:50%;background:var(--red-l);color:var(--red);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12px;flex-shrink:0;}
+.member-avatar{width:32px;height:32px;border-radius:50%;background:var(--g5);color:var(--white);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12px;flex-shrink:0;}
 .member-name{flex:1;font-size:13px;font-weight:600;border:none;background:none;font-family:inherit;outline:none;padding:2px 4px;border-radius:3px;}
 .member-name:hover,.member-name:focus{background:var(--g05);}
 .member-role{font-size:11px;color:var(--g6);border:none;background:none;font-family:inherit;outline:none;width:100%;padding:4px;border-radius:3px;resize:none;}
@@ -266,7 +270,7 @@ html,body{font-family:'Pretendard',-apple-system,sans-serif;background:var(--g05
 <!-- TOPBAR -->
 <header class="topbar">
   <div class="topbar-logo"><span class="accent">AKJ</span> Schedule</div>
-  <div class="topbar-title">서울창업허브 관악 설계공모 · 2026.05.01 – 2026.08.14</div>
+  <div class="topbar-title">서울창업허브 관악 설계공모</div>
   <div class="topbar-actions">
     <button class="btn btn-sm" onclick="exportJSON()">📥 백업</button>
     <button class="btn btn-sm" onclick="importJSON()">📤 복원</button>
@@ -423,7 +427,16 @@ const SUBTASK_SEEDS = {
 };
 
 function makeSubtasks(taskId) {
-  return (SUBTASK_SEEDS[taskId] || []).map((text, idx) => ({id:`${taskId}-s${idx+1}`, text, done:false}));
+  return (SUBTASK_SEEDS[taskId] || []).map((text, idx) => ({
+    id:`${taskId}-s${idx+1}`,
+    text,
+    done:false,
+    doneDate:null,
+    type:'check',
+    start:null,
+    end:null,
+    progress:0,
+  }));
 }
 
 function makeTask(id, phase, name, start, end, memo) {
@@ -475,6 +488,7 @@ const PHASES = {
   4: {name:'최종 마감',   short:'P4', color:'var(--p4)', start:'2026-07-13', end:'2026-07-21'},
 };
 
+const MEMBER_COLORS = ['#3b6ea8','#6f5aa8','#b45f5f','#3f7f6b','#9a6b35','#546a7b','#8a5a83','#4f7c45','#9b6a4a','#5b6fa3','#2f7f8f','#8b6f47'];
 const DEFAULT_MEMBERS = [];
 
 const DEFAULT_CHECKLIST = {
@@ -553,6 +567,7 @@ function migrateState(data) {
       end:p.end || p.start || todayStr(),
     }));
     if (!Array.isArray(migrated.subtasks)) migrated.subtasks = [];
+    migrated.subtasks = migrated.subtasks.map((subtask, subIdx) => migrateSubtask(subtask, migrated, subIdx));
     if (typeof migrated.manualProgress !== 'number') migrated.manualProgress = Number(migrated.progress || 0);
     delete migrated.start;
     delete migrated.end;
@@ -562,12 +577,37 @@ function migrateState(data) {
     migrated.memo = migrated.memo || '';
     return migrated;
   });
-  next.members = next.members || [];
+  next.members = (next.members || []).map((m, idx) => ({
+    id:m.id || 'm' + Date.now() + idx,
+    name:m.name || '신규 팀원',
+    role:m.role || '',
+    color:m.color || memberColor(m.id || String(idx)),
+  }));
   next.checklist = next.checklist || JSON.parse(JSON.stringify(DEFAULT_CHECKLIST));
   next.expandedTasks = next.expandedTasks || {};
   next.filters = Object.assign({phase:'all', status:'all', owner:'all', unassigned:false, dueSoon:false, query:''}, next.filters || {});
   if (next.selectedTaskId && !next.tasks.some(t => t.id === next.selectedTaskId)) next.selectedTaskId = null;
   return next;
+}
+
+function migrateSubtask(subtask, task, index) {
+  const firstPeriod = (task.periods && task.periods[0]) || {start:todayStr(), end:todayStr()};
+  const raw = typeof subtask === 'string' ? {text:subtask} : (subtask || {});
+  const type = raw.type === 'period' ? 'period' : 'check';
+  const done = !!raw.done;
+  const progress = type === 'period'
+    ? Math.max(0, Math.min(100, Number(raw.progress || (done ? 100 : 0))))
+    : (done ? 100 : 0);
+  return {
+    id:raw.id || `${task.id || 'task'}-s${index+1}`,
+    text:raw.text || '새 서브태스크',
+    done:type === 'period' ? progress >= 100 : done,
+    doneDate:type === 'check' ? (done ? (raw.doneDate || todayStr()) : null) : (raw.doneDate || null),
+    type,
+    start:raw.start || (type === 'period' ? firstPeriod.start : null),
+    end:raw.end || (type === 'period' ? firstPeriod.end : null),
+    progress,
+  };
 }
 
 function saveState() {
@@ -598,9 +638,19 @@ function initials(name) {
   const parts = trimmed.split(/\s+/);
   return parts.length >= 2 ? (parts[0][0] + parts[parts.length-1][0]).toUpperCase() : trimmed.substring(0, 2).toUpperCase();
 }
+function memberColor(id) {
+  const key = String(id || '');
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) hash = ((hash << 5) - hash) + key.charCodeAt(i);
+  return MEMBER_COLORS[Math.abs(hash) % MEMBER_COLORS.length];
+}
 function taskProgress(t) {
   if (t.subtasks && t.subtasks.length) {
-    return Math.round((t.subtasks.filter(s => s.done).length / t.subtasks.length) * 100);
+    const total = t.subtasks.reduce((sum, st) => {
+      if (st.type === 'period') return sum + Math.max(0, Math.min(100, Number(st.progress || 0)));
+      return sum + (st.done ? 100 : 0);
+    }, 0);
+    return Math.round(total / t.subtasks.length);
   }
   return Math.max(0, Math.min(100, Number(t.manualProgress || 0)));
 }
@@ -615,6 +665,21 @@ function taskPeriodBounds(t) {
     start:periods.map(p => p.start).sort()[0],
     end:periods.map(p => p.end).sort().slice(-1)[0],
   };
+}
+function phaseBounds(phaseNum) {
+  const phase = PHASES[phaseNum];
+  const periods = state.tasks
+    .filter(t => Number(t.phase) === Number(phaseNum))
+    .flatMap(t => t.periods || [])
+    .filter(p => p.start && p.end);
+  if (!periods.length) return {start:phase.start, end:phase.end};
+  return {
+    start:periods.map(p => p.start).sort()[0],
+    end:periods.map(p => p.end).sort().slice(-1)[0],
+  };
+}
+function syncTaskStatus(t) {
+  syncTaskStatus(t);
 }
 function isDueSoon(t) {
   const today = todayStr();
@@ -681,8 +746,9 @@ function renderGantt() {
 
   let phaseRows = '';
   Object.entries(PHASES).forEach(([num, phase]) => {
-    const startOffset = daysBetween(PROJECT_START, phase.start);
-    const duration = daysBetween(phase.start, phase.end) + 1;
+    const bounds = phaseBounds(num);
+    const startOffset = daysBetween(PROJECT_START, bounds.start);
+    const duration = daysBetween(bounds.start, bounds.end) + 1;
     phaseRows += `
       <div class="gantt-row phase-row" data-phase="${num}">
         <div class="gantt-task-info">
@@ -701,9 +767,9 @@ function renderGantt() {
     const phaseColor = `var(--p${task.phase})`;
     const ownersHtml = (task.owners||[]).slice(0,3).map(oid => {
       const m = state.members.find(x => x.id===oid);
-      return m ? `<div class="owner-chip" title="${escapeHtml(m.name)}">${initials(m.name)}</div>` : '';
+      return m ? `<div class="owner-chip" style="background:${m.color || memberColor(m.id)}" title="${escapeHtml(m.name)}">${initials(m.name)}</div>` : '';
     }).join('');
-    const moreOwners = (task.owners||[]).length > 3 ? `<div class="owner-chip">+${task.owners.length-3}</div>` : '';
+    const moreOwners = (task.owners||[]).length > 3 ? `<div class="owner-chip" style="background:var(--g5)">+${task.owners.length-3}</div>` : '';
     const statusClass = task.status==='done' ? 'completed' : (task.status==='progress' ? 'in-progress' : '');
     const barLabel = task.name.length > 20 ? task.name.substring(0,18)+'…' : task.name;
     const prog = taskProgress(task);
@@ -733,7 +799,7 @@ function renderGantt() {
           <span class="gantt-task-name" onclick="selectTask('${task.id}')">${escapeHtml(task.name)}</span>
           <div class="gantt-task-owners">${ownersHtml}${moreOwners}</div>
         </div>
-        <div class="gantt-timeline">
+        <div class="gantt-timeline" ondblclick="addTaskFromGantt(event, '${task.id}')">
           ${buildDayCells(days, today)}
           ${bars}
         </div>
@@ -770,14 +836,26 @@ function renderGantt() {
 
 function renderGanttSubtaskRows(task, days, today) {
   const items = task.subtasks && task.subtasks.length ? task.subtasks : [{id:'empty', text:'서브태스크 없음', done:false}];
-  return items.map(st => `
+  const phaseColor = `var(--p${task.phase})`;
+  return items.map(st => {
+    let visual = '';
+    if (st.type === 'period' && st.start && st.end) {
+      const startOffset = daysBetween(PROJECT_START, st.start);
+      const duration = daysBetween(st.start, st.end) + 1;
+      visual = `<div class="gantt-bar subtask-bar" style="left:${(startOffset / days) * 100}%;width:${(duration / days) * 100}%;background:${phaseColor};--progress:${Math.max(0, Math.min(100, Number(st.progress || 0)))}%">${escapeHtml(st.text)}</div>`;
+    } else if (st.type !== 'period' && st.done && st.doneDate) {
+      const offset = daysBetween(PROJECT_START, st.doneDate);
+      visual = `<div class="subtask-check-marker" style="left:${(offset / days) * 100 + (50 / days)}%">✓</div>`;
+    }
+    return `
     <div class="gantt-row subtask-row">
       <div class="gantt-task-info" style="padding-left:42px">
         ${st.id === 'empty' ? '' : `<input type="checkbox" ${st.done?'checked':''} onclick="toggleSubtask('${task.id}', '${st.id}')">`}
-        <span class="gantt-subtask-text ${st.done?'done':''}">${escapeHtml(st.text)}</span>
+        <span class="gantt-subtask-text ${st.done?'done':(st.type !== 'period' ? 'pending' : '')}">${escapeHtml(st.text)}</span>
       </div>
-      <div class="gantt-timeline">${buildDayCells(days, today)}</div>
-    </div>`).join('');
+      <div class="gantt-timeline">${buildDayCells(days, today)}${visual}</div>
+    </div>`;
+  }).join('');
 }
 
 function buildDayCells(days, today) {
@@ -803,8 +881,10 @@ function toggleTaskExpanded(event, taskId) {
 function selectPeriod(event, taskId, periodId) {
   event.stopPropagation();
   selectedPeriod = {taskId, periodId};
+  state.selectedTaskId = taskId;
+  state.activeTab = 'task';
+  saveState();
   selectTask(taskId);
-  renderGantt();
 }
 
 function startPeriodDrag(event, taskId, periodId, mode) {
@@ -900,6 +980,14 @@ document.addEventListener('click', e => {
     renderGantt();
   }
 });
+document.addEventListener('keydown', e => {
+  const tag = (e.target && e.target.tagName || '').toLowerCase();
+  if (tag === 'input' || tag === 'textarea' || e.target.isContentEditable) return;
+  if ((e.key === 'Delete' || e.key === 'Backspace') && selectedPeriod) {
+    e.preventDefault();
+    deleteSelectedPeriod();
+  }
+});
 
 // ============ TASK LIST ============
 function renderTaskFilters() {
@@ -935,9 +1023,9 @@ function renderTaskList() {
   tbody.innerHTML = filteredTasks().map(t => {
     const ownersHtml = (t.owners||[]).slice(0,4).map(oid => {
       const m = state.members.find(x => x.id===oid);
-      return m ? `<div class="owner-chip" title="${escapeHtml(m.name)}">${initials(m.name)}</div>` : '';
+      return m ? `<div class="owner-chip" style="background:${m.color || memberColor(m.id)}" title="${escapeHtml(m.name)}">${initials(m.name)}</div>` : '';
     }).join('');
-    const moreOwners = (t.owners||[]).length > 4 ? `<div class="owner-chip">+${t.owners.length-4}</div>` : '';
+    const moreOwners = (t.owners||[]).length > 4 ? `<div class="owner-chip" style="background:var(--g5)">+${t.owners.length-4}</div>` : '';
     const statusInfo = {todo:['status-todo','대기'], progress:['status-progress','진행'], done:['status-done','완료']}[t.status];
     const prog = taskProgress(t);
     const selected = state.selectedTaskId === t.id ? 'selected' : '';
@@ -992,7 +1080,7 @@ function renderMembers() {
     return `<div class="member-card" data-member-id="${m.id}">
       <button class="member-remove" onclick="removeMember('${m.id}')" title="삭제">×</button>
       <div class="member-head">
-        <div class="member-avatar">${initials(m.name)}</div>
+        <div class="member-avatar" style="background:${m.color || memberColor(m.id)}">${initials(m.name)}</div>
         <input class="member-name" value="${escapeHtml(m.name)}" placeholder="이름" onchange="updateMember('${m.id}', 'name', this.value)">
       </div>
       <textarea class="member-role" rows="2" placeholder="역할 · 담당 분야 (예: 매스/입면 · 패널 디자인 · 도면 컬러링)" onchange="updateMember('${m.id}', 'role', this.value)">${escapeHtml(m.role||'')}</textarea>
@@ -1003,7 +1091,7 @@ function renderMembers() {
 
 function addMember() {
   const id = 'm' + Date.now();
-  state.members.push({id, name:'신규 팀원', role:''});
+  state.members.push({id, name:'신규 팀원', role:'', color:memberColor(id)});
   saveState();
   renderAll();
   setTimeout(() => {
@@ -1060,12 +1148,33 @@ function renderTaskDetail() {
       <input class="detail-input" type="date" value="${p.end}" onchange="updatePeriod('${t.id}', '${p.id}', 'end', this.value)">
       <button class="period-remove" title="삭제" onclick="removePeriod('${t.id}', '${p.id}')">×</button>
     </div>`).join('');
-  const subtaskItems = (t.subtasks || []).map(st => `
-    <div class="subtask-edit-item ${st.done?'done':''}">
-      <input type="checkbox" ${st.done?'checked':''} onchange="toggleSubtask('${t.id}', '${st.id}')">
-      <input class="subtask-input" value="${escapeHtml(st.text)}" onchange="updateSubtask('${t.id}', '${st.id}', this.value)">
+  const subtaskItems = (t.subtasks || []).map(st => {
+    const isPeriod = st.type === 'period';
+    return `
+    <div class="subtask-edit-item ${st.done?'done':''}" style="align-items:flex-start">
+      <input type="checkbox" ${st.done?'checked':''} onchange="toggleSubtask('${t.id}', '${st.id}')" style="margin-top:7px">
+      <div style="flex:1;min-width:0">
+        <input class="subtask-input" value="${escapeHtml(st.text)}" onchange="updateSubtaskText('${t.id}', '${st.id}', this.value)">
+        ${isPeriod ? `
+          <div class="detail-row" style="margin-top:6px">
+            <input class="detail-input" type="date" value="${st.start || ''}" onchange="updateSubtaskField('${t.id}', '${st.id}', 'start', this.value)">
+            <input class="detail-input" type="date" value="${st.end || ''}" onchange="updateSubtaskField('${t.id}', '${st.id}', 'end', this.value)">
+          </div>
+          <div class="progress-input" style="margin-top:6px">
+            <input type="range" min="0" max="100" step="5" value="${st.progress || 0}" oninput="updateSubtaskField('${t.id}', '${st.id}', 'progress', parseInt(this.value)||0)">
+            <input type="number" min="0" max="100" value="${st.progress || 0}" onchange="updateSubtaskField('${t.id}', '${st.id}', 'progress', parseInt(this.value)||0)">
+          </div>
+          <button class="btn btn-sm" style="margin-top:6px" onclick="setSubtaskType('${t.id}', '${st.id}', 'check')">체크형으로 전환</button>
+        ` : `
+          <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
+            ${st.done ? `<input class="detail-input" style="width:140px" type="date" value="${st.doneDate || todayStr()}" onchange="updateSubtaskField('${t.id}', '${st.id}', 'doneDate', this.value)">` : '<span style="font-size:11px;color:var(--g4)">미완료</span>'}
+            <button class="btn btn-sm" onclick="setSubtaskType('${t.id}', '${st.id}', 'period')">기간 설정</button>
+          </div>
+        `}
+      </div>
       <button class="subtask-remove" title="삭제" onclick="removeSubtask('${t.id}', '${st.id}')">×</button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
   container.innerHTML = `
     <div class="detail-field">
       <div class="detail-label">단계</div>
@@ -1096,7 +1205,7 @@ function renderTaskDetail() {
             const on = (t.owners||[]).includes(m.id);
             return `<button class="owner-toggle ${on?'active':''}" 
                           onclick="toggleOwner('${t.id}', '${m.id}')">
-              <span style="width:14px;height:14px;border-radius:50%;background:${on?'rgba(255,255,255,0.25)':'var(--red-l)'};color:${on?'#fff':'var(--red)'};display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:600">${initials(m.name)}</span>
+              <span style="width:14px;height:14px;border-radius:50%;background:${on?'rgba(255,255,255,0.25)':(m.color || memberColor(m.id))};color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:600">${initials(m.name)}</span>
               ${escapeHtml(m.name)}
             </button>`;
           }).join('')}
@@ -1189,7 +1298,11 @@ function addPeriod(taskId) {
 function removePeriod(taskId, periodId) {
   const t = state.tasks.find(x => x.id===taskId);
   if (!t) return;
-  if ((t.periods || []).length <= 1) { alert('기간은 최소 1개가 필요합니다.'); return; }
+  if ((t.periods || []).length <= 1) {
+    if (!confirm('이 작업에는 기간이 하나만 남아 있습니다. 이 기간을 삭제하면 작업 자체가 삭제됩니다. 작업을 삭제할까요?')) return;
+    deleteTaskById(taskId, false);
+    return;
+  }
   t.periods = t.periods.filter(p => p.id !== periodId);
   if (selectedPeriod && selectedPeriod.periodId === periodId) selectedPeriod = null;
   saveState();
@@ -1201,6 +1314,12 @@ function toggleSubtask(taskId, subtaskId) {
   const st = t && t.subtasks.find(x => x.id===subtaskId);
   if (!st) return;
   st.done = !st.done;
+  if (st.type === 'period') {
+    st.progress = st.done ? 100 : Math.min(Number(st.progress || 0), 95);
+  } else {
+    st.doneDate = st.done ? (st.doneDate || todayStr()) : null;
+    st.progress = st.done ? 100 : 0;
+  }
   const prog = taskProgress(t);
   if (prog >= 100) t.status = 'done';
   else if (prog > 0 && t.status === 'todo') t.status = 'progress';
@@ -1209,11 +1328,50 @@ function toggleSubtask(taskId, subtaskId) {
   renderAll();
 }
 
-function updateSubtask(taskId, subtaskId, text) {
+function updateSubtaskText(taskId, subtaskId, text) {
   const t = state.tasks.find(x => x.id===taskId);
   const st = t && t.subtasks.find(x => x.id===subtaskId);
   if (!st) return;
   st.text = text;
+  saveState();
+  renderAll();
+}
+
+function updateSubtaskField(taskId, subtaskId, field, value) {
+  const t = state.tasks.find(x => x.id===taskId);
+  const st = t && t.subtasks.find(x => x.id===subtaskId);
+  if (!st) return;
+  st[field] = field === 'progress' ? Math.max(0, Math.min(100, Number(value || 0))) : value;
+  if (field === 'progress' && st.type === 'period') st.done = st.progress >= 100;
+  if ((field === 'start' || field === 'end') && st.start && st.end && daysBetween(st.start, st.end) < 0) {
+    if (field === 'start') st.end = st.start;
+    else st.start = st.end;
+  }
+  if (field === 'doneDate' && st.type === 'check') {
+    st.done = !!value;
+    st.progress = st.done ? 100 : 0;
+  }
+  syncTaskStatus(t);
+  saveState();
+  renderAll();
+}
+
+function setSubtaskType(taskId, subtaskId, type) {
+  const t = state.tasks.find(x => x.id===taskId);
+  const st = t && t.subtasks.find(x => x.id===subtaskId);
+  if (!t || !st) return;
+  const firstPeriod = (t.periods && t.periods[0]) || {start:todayStr(), end:todayStr()};
+  st.type = type;
+  if (type === 'period') {
+    st.start = st.start || firstPeriod.start;
+    st.end = st.end || firstPeriod.end;
+    st.progress = st.done ? 100 : Math.max(0, Math.min(100, Number(st.progress || 0)));
+  } else {
+    st.progress = st.done ? 100 : 0;
+    st.start = null;
+    st.end = null;
+  }
+  syncTaskStatus(t);
   saveState();
   renderAll();
 }
@@ -1223,7 +1381,7 @@ function addSubtask(taskId, text) {
   const t = state.tasks.find(x => x.id===taskId);
   if (!t) return;
   t.subtasks = t.subtasks || [];
-  t.subtasks.push({id:'s'+Date.now(), text:text.trim(), done:false});
+  t.subtasks.push({id:'s'+Date.now(), text:text.trim(), done:false, doneDate:null, type:'check', start:null, end:null, progress:0});
   saveState();
   renderAll();
 }
@@ -1236,12 +1394,11 @@ function removeSubtask(taskId, subtaskId) {
   renderAll();
 }
 
-function addTask() {
+function addTask(phase = 1, startDate = todayStr(), endDate = addDays(startDate, 3)) {
   const id = 't' + Date.now();
-  const today = todayStr();
   state.tasks.push({
-    id, phase:1, name:'새 작업',
-    periods:[{id:'p'+Date.now(), start:today, end:addDays(today, 3)}],
+    id, phase:Number(phase) || 1, name:'새 작업',
+    periods:[{id:'p'+Date.now(), start:startDate, end:endDate}],
     owners:[], status:'todo', memo:'', subtasks:[],
   });
   state.selectedTaskId = id;
@@ -1251,16 +1408,37 @@ function addTask() {
   renderAll();
 }
 
+function addTaskFromGantt(event, sourceTaskId) {
+  if (event.target.closest('.gantt-bar')) return;
+  const task = state.tasks.find(t => t.id === sourceTaskId);
+  const timeline = event.currentTarget;
+  const rect = timeline.getBoundingClientRect();
+  const days = daysBetween(PROJECT_START, PROJECT_END) + 1;
+  const index = Math.max(0, Math.min(days - 1, Math.floor(((event.clientX - rect.left) / rect.width) * days)));
+  const date = addDays(PROJECT_START, index);
+  addTask(task ? task.phase : 1, date, date);
+}
+
 function deleteTask(taskId) {
   const t = state.tasks.find(x => x.id===taskId);
   if (!t) return;
   if (!confirm(`'${t.name}' 작업을 삭제할까요?`)) return;
+  deleteTaskById(taskId, false);
+}
+
+function deleteTaskById(taskId, shouldRender = true) {
   state.tasks = state.tasks.filter(x => x.id !== taskId);
   delete state.expandedTasks[taskId];
   if (state.selectedTaskId === taskId) state.selectedTaskId = null;
   if (selectedPeriod && selectedPeriod.taskId === taskId) selectedPeriod = null;
   saveState();
-  renderAll();
+  if (shouldRender) renderAll();
+  else renderAll();
+}
+
+function deleteSelectedPeriod() {
+  if (!selectedPeriod) return;
+  removePeriod(selectedPeriod.taskId, selectedPeriod.periodId);
 }
 
 function toggleOwner(taskId, memberId) {
