@@ -22,6 +22,17 @@ html,body{font-family:'Pretendard',-apple-system,sans-serif;background:var(--g05
 
 /* ===== LAYOUT ===== */
 .app{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
+.app.locked{display:none;}
+.pin-screen{position:fixed;inset:0;background:var(--white);display:none;align-items:center;justify-content:center;z-index:2000;padding:24px;}
+.pin-screen.show{display:flex;}
+.pin-card{width:min(360px,100%);border:1px solid var(--border);padding:28px;background:var(--white);box-shadow:var(--shadow-h);}
+.pin-logo{font-weight:700;font-size:18px;margin-bottom:6px;}
+.pin-logo .accent{color:var(--red);}
+.pin-title{font-size:13px;color:var(--g5);margin-bottom:20px;}
+.pin-form{display:flex;gap:8px;}
+.pin-input{flex:1;height:38px;border:1px solid var(--border);padding:0 12px;font-family:inherit;font-size:16px;letter-spacing:0.2em;text-align:center;outline:none;}
+.pin-input:focus{border-color:var(--red);}
+.pin-error{height:18px;margin-top:10px;font-size:11px;color:var(--red);}
 .topbar{height:56px;background:var(--white);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:20px;flex-shrink:0;}
 .topbar-logo{font-weight:700;font-size:15px;letter-spacing:-0.01em;}
 .topbar-logo .accent{color:var(--red);}
@@ -33,6 +44,10 @@ html,body{font-family:'Pretendard',-apple-system,sans-serif;background:var(--g05
 .btn-primary:hover{background:var(--red-d);border-color:var(--red-d);color:var(--white);}
 .btn-sm{height:26px;padding:0 10px;font-size:11px;}
 .btn-icon{width:32px;padding:0;justify-content:center;}
+.btn-danger{border-color:var(--red);color:var(--red);}
+.btn-danger:hover{background:var(--red-l);border-color:var(--red);color:var(--red);}
+.event-banner{display:none;padding:9px 24px;background:#fff3cd;color:#856404;border-bottom:1px solid #ffe69c;font-size:12px;font-weight:500;}
+.event-banner.show{display:block;}
 
 .main{flex:1;display:flex;overflow:hidden;}
 .content{flex:1;overflow-y:auto;padding:24px;}
@@ -73,6 +88,8 @@ html,body{font-family:'Pretendard',-apple-system,sans-serif;background:var(--g05
 
 .gantt-row{display:flex;border-bottom:1px solid var(--border-soft);min-height:34px;position:relative;}
 .gantt-row:hover{background:var(--g05);}
+.gantt-row.subtask-row{min-height:28px;background:var(--g0);}
+.gantt-row.subtask-row:hover{background:var(--g0);}
 .gantt-row.phase-row{background:var(--g0);font-weight:600;}
 .gantt-row.phase-row:hover{background:var(--g1);}
 .gantt-row.phase-row .gantt-task-info{background:var(--g0);}
@@ -81,6 +98,9 @@ html,body{font-family:'Pretendard',-apple-system,sans-serif;background:var(--g05
 .phase-tag.p1{background:var(--p1);} .phase-tag.p2{background:var(--p2);} .phase-tag.p3{background:var(--p3);} .phase-tag.p4{background:var(--p4);}
 .gantt-task-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;}
 .gantt-task-name:hover{color:var(--red);}
+.gantt-toggle{width:16px;border:none;background:none;color:var(--g5);font-size:10px;cursor:pointer;flex-shrink:0;}
+.gantt-subtask-text{font-size:11px;color:var(--g6);}
+.gantt-subtask-text.done{color:var(--g4);text-decoration:line-through;}
 .gantt-task-owners{display:flex;gap:2px;flex-shrink:0;}
 .owner-chip{width:18px;height:18px;border-radius:50%;background:var(--g2);color:var(--g7);font-size:9px;display:flex;align-items:center;justify-content:center;font-weight:600;cursor:default;}
 .gantt-timeline{flex:1;position:relative;display:flex;}
@@ -91,6 +111,12 @@ html,body{font-family:'Pretendard',-apple-system,sans-serif;background:var(--g05
 
 .gantt-bar{position:absolute;top:6px;bottom:6px;border-radius:3px;display:flex;align-items:center;padding:0 8px;font-size:10px;color:var(--white);font-weight:500;overflow:hidden;cursor:pointer;transition:all .12s;box-shadow:var(--shadow);white-space:nowrap;}
 .gantt-bar:hover{transform:translateY(-1px);box-shadow:var(--shadow-h);z-index:3;}
+.gantt-bar.selected{outline:2px solid #2563eb;outline-offset:2px;z-index:4;}
+.gantt-bar.dragging{transition:none;z-index:5;}
+.gantt-handle{position:absolute;top:0;bottom:0;width:8px;background:rgba(255,255,255,0.35);opacity:0;transition:opacity .12s;}
+.gantt-bar.selected .gantt-handle,.gantt-bar:hover .gantt-handle{opacity:1;}
+.gantt-handle.left{left:0;cursor:ew-resize;}
+.gantt-handle.right{right:0;cursor:ew-resize;}
 .gantt-bar.phase-bar{top:8px;bottom:8px;opacity:0.85;}
 .gantt-bar.completed{opacity:0.5;}
 .gantt-bar.completed::before{content:'✓ ';}
@@ -113,7 +139,14 @@ html,body{font-family:'Pretendard',-apple-system,sans-serif;background:var(--g05
 .task-table tbody tr{cursor:pointer;transition:background .1s;}
 .task-table tbody tr:hover{background:var(--g0);}
 .task-table tbody tr.selected{background:var(--red-l);}
+.task-table tbody tr.due-soon{background:#fff8f0;}
+.task-table tbody tr.due-soon:hover{background:#fff3e4;}
 .task-row-phase{display:inline-flex;align-items:center;gap:6px;}
+.task-filterbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px 14px;border-bottom:1px solid var(--border-soft);background:var(--g0);}
+.filter-select,.filter-search{height:30px;border:1px solid var(--border);background:var(--white);font-family:inherit;font-size:11px;color:var(--g7);padding:0 8px;outline:none;}
+.filter-search{min-width:180px;flex:1;}
+.filter-check{height:30px;display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--g6);}
+.task-add-row{padding:12px 14px;border-top:1px solid var(--border-soft);background:var(--g0);}
 .status-pill{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:500;}
 .status-todo{background:var(--g1);color:var(--g6);}
 .status-progress{background:var(--p1-l);color:var(--p1);}
@@ -172,7 +205,19 @@ html,body{font-family:'Pretendard',-apple-system,sans-serif;background:var(--g05
 .status-btn.active.done{background:#dcfce7;border-color:#15803d;color:#15803d;}
 .progress-input{display:flex;align-items:center;gap:10px;}
 .progress-input input[type=range]{flex:1;}
+.progress-input input[disabled]{opacity:.55;}
 .progress-input input[type=number]{width:60px;padding:6px 8px;border:1px solid var(--border);font-family:inherit;font-size:12px;text-align:center;}
+.period-list,.subtask-list{display:flex;flex-direction:column;gap:6px;}
+.period-item,.subtask-edit-item{display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--border-soft);}
+.period-item input[type=date]{min-width:0;}
+.subtask-edit-item.done .subtask-input{color:var(--g4);text-decoration:line-through;}
+.subtask-input{flex:1;border:none;background:transparent;font-family:inherit;font-size:12px;outline:none;padding:4px;}
+.subtask-input:focus{background:var(--g05);}
+.subtask-remove,.period-remove{width:22px;height:22px;border:none;background:none;color:var(--g4);cursor:pointer;font-size:14px;opacity:0;transition:opacity .12s;}
+.subtask-edit-item:hover .subtask-remove,.period-item:hover .period-remove{opacity:1;}
+.subtask-add{display:flex;gap:6px;margin-top:8px;}
+.subtask-add input{flex:1;padding:7px 10px;border:1px solid var(--border);font-family:inherit;font-size:12px;outline:none;}
+.subtask-count{margin-left:6px;font-size:11px;color:var(--red);font-variant-numeric:tabular-nums;}
 
 /* CHECKLIST */
 .check-section{margin-bottom:22px;}
@@ -204,6 +249,18 @@ html,body{font-family:'Pretendard',-apple-system,sans-serif;background:var(--g05
 </style>
 </head>
 <body>
+<div class="pin-screen" id="pin-screen">
+  <div class="pin-card">
+    <div class="pin-logo"><span class="accent">AKJ</span> Schedule</div>
+    <div class="pin-title">서울창업허브 관악 설계공모</div>
+    <div class="pin-form">
+      <input class="pin-input" id="pin-input" type="password" inputmode="numeric" maxlength="4" placeholder="PIN" onkeypress="if(event.key==='Enter') verifyPin()">
+      <button class="btn btn-primary" onclick="verifyPin()">확인</button>
+    </div>
+    <div class="pin-error" id="pin-error"></div>
+  </div>
+</div>
+
 <div class="app">
 
 <!-- TOPBAR -->
@@ -214,9 +271,11 @@ html,body{font-family:'Pretendard',-apple-system,sans-serif;background:var(--g05
     <button class="btn btn-sm" onclick="exportJSON()">📥 백업</button>
     <button class="btn btn-sm" onclick="importJSON()">📤 복원</button>
     <button class="btn btn-sm" onclick="window.print()">🖨️ 인쇄</button>
+    <button class="btn btn-sm" onclick="lockDashboard()">🔒 잠금</button>
     <button class="btn btn-sm btn-icon" onclick="resetAll()" title="초기화">↻</button>
   </div>
 </header>
+<div class="event-banner" id="event-banner"></div>
 
 <div class="main">
 
@@ -236,14 +295,14 @@ html,body{font-family:'Pretendard',-apple-system,sans-serif;background:var(--g05
       <div class="kpi-bar"><div class="kpi-bar-fill" id="kpi-progress-bar" style="width:0%"></div></div>
     </div>
     <div class="kpi">
-      <div class="kpi-label">완료 · 진행 · 대기</div>
-      <div class="kpi-value"><span id="kpi-done">0</span><span class="unit">/ <span id="kpi-total">0</span></span></div>
-      <div class="kpi-sub"><span id="kpi-inprogress">0</span> 진행 중 · <span id="kpi-todo">0</span> 대기</div>
+      <div class="kpi-label">단계별 진행률</div>
+      <div class="kpi-sub">P1 <b id="kpi-p1" style="color:var(--p1)">0%</b> · P2 <b id="kpi-p2" style="color:var(--p2)">0%</b></div>
+      <div class="kpi-bar"><div class="kpi-bar-fill" id="kpi-p12-bar" style="width:0%;background:var(--p1)"></div></div>
     </div>
     <div class="kpi">
-      <div class="kpi-label">미배정 작업</div>
-      <div class="kpi-value"><span id="kpi-unassigned">0</span><span class="unit">건</span></div>
-      <div class="kpi-sub">담당자 지정 필요</div>
+      <div class="kpi-label">단계별 진행률</div>
+      <div class="kpi-sub">P3 <b id="kpi-p3" style="color:var(--p3)">0%</b> · P4 <b id="kpi-p4" style="color:var(--p4)">0%</b></div>
+      <div class="kpi-bar"><div class="kpi-bar-fill" id="kpi-p34-bar" style="width:0%;background:var(--p3)"></div></div>
     </div>
   </div>
 
@@ -270,6 +329,7 @@ html,body{font-family:'Pretendard',-apple-system,sans-serif;background:var(--g05
       <div class="section-title">작업 목록</div>
       <div class="section-meta">행을 클릭하면 우측에서 편집</div>
     </div>
+    <div class="task-filterbar" id="task-filterbar"></div>
     <table class="task-table">
       <thead>
         <tr>
@@ -283,6 +343,9 @@ html,body{font-family:'Pretendard',-apple-system,sans-serif;background:var(--g05
       </thead>
       <tbody id="task-tbody"></tbody>
     </table>
+    <div class="task-add-row">
+      <button class="btn btn-sm" onclick="addTask()">+ 작업 추가</button>
+    </div>
   </div>
 
 </div>
@@ -324,6 +387,7 @@ html,body{font-family:'Pretendard',-apple-system,sans-serif;background:var(--g05
 
 // ============ DATA MODEL ============
 const STORAGE_KEY = 'akj-schedule-v1';
+const ACCESS_PIN = '2026';
 const PROJECT_START = '2026-05-01';
 const PROJECT_END   = '2026-08-14';
 const SUBMIT_DATE   = '2026-07-21';
@@ -335,42 +399,69 @@ const HOLIDAYS_2026 = {
   '2026-08-15': '광복절',
 };
 
+const SUBTASK_SEEDS = {
+  t1:['연면적·건폐율·용적률 수치 확인','주차대수 산정 기준 확인','용도 분류 및 복합 용도 요건 정리','교육환경보호구역 제한사항 정리','철도 환기구 이격 기준 확인','중점경관관리구역 가이드라인 정리'],
+  t2:['심사위원 7인 이력 및 대표작 조사','각 심사위원 건축적 가치·철학 정리','창업허브 직접 경험자(박노욱·오정식·황지은) 우선 분석','심사 평가항목별 심사위원 매핑','심사위원 분석 노션 문서 완성'],
+  t3:['20개 후보 사례 리스트 확정','5개 카테고리 분류 완료','각 사례 건축적 분석 작성','사례별 이미지·링크 수집','마크다운 최종본 노션 업로드'],
+  t4:['현장설명회 사전 신청 완료','대지 경계·고저차 현장 확인','신림로 접면 및 북·동측 현황도로 실측','인접 주거지·학교·창업시설 현황 파악','현장 사진 촬영 및 정리'],
+  t5:['지침서 모호 사항 항목 정리','법규 관련 질의 항목 작성','홈페이지 접수 완료 확인'],
+  t6:['매스 대안 3개안 이상 스터디','사이트 배치 전략 결정','차량 진출입(서측) 및 보행 동선 계획','건축선 후퇴·이격 조건 반영 확인','1차 디자인 리뷰 완료'],
+  t7:['질의응답 게시 내용 전체 확인','설계 조건 변경사항 정리','변경사항 매스 및 법규 계획에 반영'],
+  t8:['각 층 평면 초안 작성','코어 위치 및 수직 동선 확정','실별 면적표 작성 및 지침서 대조','딥테크 특화공간 층고·하중 계획','2차 디자인 리뷰 완료'],
+  t9:['최종 매스 및 입면 디자인 확정','외피 재료 및 분절 계획 수립','구조 시스템 선정','기계·전기실 및 설비 샤프트 위치 확정','외부 공간·조경 계획 통합','3차 디자인 리뷰 완료'],
+  t10:['전체 설계안 사내 발표 자료 준비','리뷰 피드백 항목 정리','수정 우선순위 결정'],
+  t11:['대표 이미지 뷰 3개 이상 선정','조감도 모델링 완성','외부 투시도 렌더링 완성','내부 주요 공간 투시도 렌더링 완성','이미지 편집 및 보정 완료'],
+  t12:['배치도 컬러링 완성','각 층 평면도 컬러링 완성','4면 입면도 컬러링 완성','종·횡 단면도 컬러링 완성','다이어그램 작성 완성'],
+  t13:['설계설명서(서식9) 텍스트 작성','건축개요(서식8) 작성','층별 세부용도 및 면적표(서식10~11) 작성','관련법규 검토서(서식12) 작성','공사비 검토 의견서(서식13) 작성','기타 서식(1~7, 15) 준비'],
+  t14:['장애인 편의시설 법규 검토','피난·방화 계획 검토','주차 165대 이상 확인','연면적 ±5%~+3% 범위 확인','용도별 면적 상한(업무 3,000㎡·제조 500㎡ 미만) 확인'],
+  t15:['1번 패널(14,400×8,100px) 레이아웃 초안','2번 패널 레이아웃 초안','폰트·색상 통일성 점검','주요 마감재료 도면 표기 확인','파일 용량 각 30MB 이하 확인'],
+  t16:['전체 패널 가본 출력 또는 화면 검토','설계설명서 가본 완성','제출 서류 전체 목록 대조'],
+  t17:['리뷰 지적사항 항목별 수정 완료','수정 전후 비교 정리'],
+  t18:['투시도 최종 리터칭','도면 선 굵기·레이어 정리','폰트 가독성 최종 점검','패널 전체 해상도 300dpi 이상 확인'],
+  t19:['모든 파일명에 PIN번호 표기 확인','업체 식별 표기 없음 확인','파일 용량 규격 준수 확인','PDF 변환 상태 확인','제출 확인서 출력 준비'],
+  t20:['홈페이지 로그인 및 제출 화면 확인','전체 파일 업로드 완료','제출 확인서 출력 및 저장'],
+};
+
+function makeSubtasks(taskId) {
+  return (SUBTASK_SEEDS[taskId] || []).map((text, idx) => ({id:`${taskId}-s${idx+1}`, text, done:false}));
+}
+
+function makeTask(id, phase, name, start, end, memo) {
+  return {id, phase, name, periods:[{id:`${id}-p1`, start, end}], owners:[], status:'todo', memo, subtasks:makeSubtasks(id)};
+}
+
 // 기본 작업 데이터 — 사용자가 수정/추가/삭제 가능
 const DEFAULT_TASKS = [
-  // 단계 1 — 전략·리서치
-  {id:'t1', phase:1, name:'지침서 및 법규 분석', start:'2026-05-13', end:'2026-05-20', owners:[], status:'todo', progress:0, memo:'연면적·건폐율·용적률·주차대수 핵심 지표 추출'},
-  {id:'t2', phase:1, name:'심사위원 리서치', start:'2026-05-13', end:'2026-05-22', owners:[], status:'todo', progress:0, memo:'위원별 성향·과거 심사평·대표작 분석'},
-  {id:'t3', phase:1, name:'사례 조사', start:'2026-05-13', end:'2026-05-29', owners:[], status:'todo', progress:0, memo:'유사 프로그램/규모 국내외 사례 분석'},
-  {id:'t4', phase:1, name:'현장 답사 · 현장설명회', start:'2026-05-18', end:'2026-05-18', owners:[], status:'todo', progress:0, memo:'14:00 서울창업허브 공덕'},
-  {id:'t5', phase:1, name:'질의서 작성·접수', start:'2026-05-19', end:'2026-05-20', owners:[], status:'todo', progress:0, memo:'17:00 마감, 홈페이지만 가능'},
-  // 단계 2 — 디자인 발전
-  {id:'t6', phase:2, name:'[Iter 1] 매스 스터디 · 배치', start:'2026-05-26', end:'2026-05-29', owners:[], status:'todo', progress:0, memo:'매스 대안 3개안 이상, 사이트 배치, 진입 시퀀스'},
-  {id:'t7', phase:2, name:'질의응답 반영', start:'2026-05-29', end:'2026-06-01', owners:[], status:'todo', progress:0, memo:'14:00 게재된 답변 검토 및 설계 반영'},
-  {id:'t8', phase:2, name:'[Iter 2] 평면·단면 구체화', start:'2026-06-01', end:'2026-06-05', owners:[], status:'todo', progress:0, memo:'코어·수직동선·실별 면적표 검토'},
-  {id:'t9', phase:2, name:'[Iter 3] 입면·구조·설비', start:'2026-06-08', end:'2026-06-12', owners:[], status:'todo', progress:0, memo:'최종 매스·입면·구조 시스템·외부 공간 통합'},
-  {id:'t10', phase:2, name:'중간 사내 리뷰', start:'2026-06-15', end:'2026-06-19', owners:[], status:'todo', progress:0, memo:'전체 디자인 발전 안 최종 검증'},
-  // 단계 3 — 성과물 제작
-  {id:'t11', phase:3, name:'CG · 투시도 모델링', start:'2026-06-15', end:'2026-07-05', owners:[], status:'todo', progress:0, memo:'대표 이미지·조감도·내부 투시도 뷰 선정 및 렌더'},
-  {id:'t12', phase:3, name:'도면 작업', start:'2026-06-15', end:'2026-07-08', owners:[], status:'todo', progress:0, memo:'배치도·평면도·단면도·입면도 컬러링 + 다이어그램화'},
-  {id:'t13', phase:3, name:'설계설명서·서식 작성', start:'2026-06-22', end:'2026-07-08', owners:[], status:'todo', progress:0, memo:'서식 1~15 + 컨셉 텍스트 + 친환경 계획'},
-  {id:'t14', phase:3, name:'법규·기술 사전 검토', start:'2026-06-29', end:'2026-07-08', owners:[], status:'todo', progress:0, memo:'장애인 편의·피난·방화·주차 위반 사항 점검'},
-  {id:'t15', phase:3, name:'패널 레이아웃·구성', start:'2026-07-01', end:'2026-07-10', owners:[], status:'todo', progress:0, memo:'14,400×8,100px / 30MB 이하 / 2매'},
-  {id:'t16', phase:3, name:'사내 1차 마감', start:'2026-07-10', end:'2026-07-10', owners:[], status:'todo', progress:0, memo:'전 성과물 가본 완성'},
-  // 단계 4 — 최종 마감
-  {id:'t17', phase:4, name:'사내 리뷰 반영 · 수정', start:'2026-07-13', end:'2026-07-17', owners:[], status:'todo', progress:0, memo:'지적 보완사항 집중 수정'},
-  {id:'t18', phase:4, name:'디테일 마감', start:'2026-07-15', end:'2026-07-19', owners:[], status:'todo', progress:0, memo:'투시도 리터칭·도면 선 굵기·폰트 가독성'},
-  {id:'t19', phase:4, name:'제출물 규격·익명성 점검', start:'2026-07-18', end:'2026-07-20', owners:[], status:'todo', progress:0, memo:'PIN번호 · 파일명 · 용량 · 해상도 · 업체 식별 표기'},
-  {id:'t20', phase:4, name:'온라인 제출', start:'2026-07-20', end:'2026-07-21', owners:[], status:'todo', progress:0, memo:'7/21 17:00 전 업로드 완료. 7/20 권장'},
+  makeTask('t1',1,'지침서 및 법규 분석','2026-05-13','2026-05-20','연면적·건폐율·용적률·주차대수 핵심 지표 추출'),
+  makeTask('t2',1,'심사위원 리서치','2026-05-13','2026-05-22','위원별 성향·과거 심사평·대표작 분석'),
+  makeTask('t3',1,'사례 조사','2026-05-13','2026-05-29','유사 프로그램/규모 국내외 사례 분석'),
+  makeTask('t4',1,'현장 답사 · 현장설명회','2026-05-18','2026-05-18','14:00 서울창업허브 공덕'),
+  makeTask('t5',1,'질의서 작성·접수','2026-05-19','2026-05-20','17:00 마감, 홈페이지만 가능'),
+  makeTask('t6',2,'[Iter 1] 매스 스터디 · 배치','2026-05-26','2026-05-29','매스 대안 3개안 이상, 사이트 배치, 진입 시퀀스'),
+  makeTask('t7',2,'질의응답 반영','2026-05-29','2026-06-01','14:00 게재된 답변 검토 및 설계 반영'),
+  makeTask('t8',2,'[Iter 2] 평면·단면 구체화','2026-06-01','2026-06-05','코어·수직동선·실별 면적표 검토'),
+  makeTask('t9',2,'[Iter 3] 입면·구조·설비','2026-06-08','2026-06-12','최종 매스·입면·구조 시스템·외부 공간 통합'),
+  makeTask('t10',2,'중간 사내 리뷰','2026-06-15','2026-06-19','전체 디자인 발전 안 최종 검증'),
+  makeTask('t11',3,'CG · 투시도 모델링','2026-06-15','2026-07-05','대표 이미지·조감도·내부 투시도 뷰 선정 및 렌더'),
+  makeTask('t12',3,'도면 작업','2026-06-15','2026-07-08','배치도·평면도·단면도·입면도 컬러링 + 다이어그램화'),
+  makeTask('t13',3,'설계설명서·서식 작성','2026-06-22','2026-07-08','서식 1~15 + 컨셉 텍스트 + 친환경 계획'),
+  makeTask('t14',3,'법규·기술 사전 검토','2026-06-29','2026-07-08','장애인 편의·피난·방화·주차 위반 사항 점검'),
+  makeTask('t15',3,'패널 레이아웃·구성','2026-07-01','2026-07-10','14,400×8,100px / 30MB 이하 / 2매'),
+  makeTask('t16',3,'사내 1차 마감','2026-07-10','2026-07-10','전 성과물 가본 완성'),
+  makeTask('t17',4,'사내 리뷰 반영 · 수정','2026-07-13','2026-07-17','지적 보완사항 집중 수정'),
+  makeTask('t18',4,'디테일 마감','2026-07-15','2026-07-19','투시도 리터칭·도면 선 굵기·폰트 가독성'),
+  makeTask('t19',4,'제출물 규격·익명성 점검','2026-07-18','2026-07-20','PIN번호 · 파일명 · 용량 · 해상도 · 업체 식별 표기'),
+  makeTask('t20',4,'온라인 제출','2026-07-20','2026-07-21','7/21 17:00 전 업로드 완료. 7/20 권장'),
 ];
 
 // 마일스톤
 const MILESTONES = [
   {date:'2026-05-08', label:'시행공고', critical:false},
-  {date:'2026-05-18', label:'현장설명회', critical:false},
-  {date:'2026-05-20', label:'질의 마감', critical:false},
-  {date:'2026-05-29', label:'질의응답', critical:false},
+  {date:'2026-05-18', label:'현장설명회', time:'14:00', critical:false},
+  {date:'2026-05-20', label:'질의 마감', time:'17:00', critical:false},
+  {date:'2026-05-29', label:'질의응답', time:'14:00', critical:false},
   {date:'2026-07-10', label:'사내 마감', critical:true},
-  {date:'2026-07-21', label:'최종 접수', critical:true},
+  {date:'2026-07-21', label:'최종 접수', time:'17:00', critical:true},
   {date:'2026-07-31', label:'1차 심사', critical:false},
   {date:'2026-08-10', label:'2차 심사', critical:false},
   {date:'2026-08-13', label:'발표', critical:true},
@@ -424,28 +515,59 @@ const DEFAULT_CHECKLIST = {
 
 // ============ STATE ============
 let state = loadState();
+let selectedPeriod = null;
+let dragState = null;
+let focusTaskNameOnRender = false;
 
-function loadState() {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      // 마이그레이션: 필드 누락 대비
-      parsed.tasks = parsed.tasks || JSON.parse(JSON.stringify(DEFAULT_TASKS));
-      parsed.members = parsed.members || [];
-      parsed.checklist = parsed.checklist || JSON.parse(JSON.stringify(DEFAULT_CHECKLIST));
-      parsed.selectedTaskId = parsed.selectedTaskId || null;
-      parsed.activeTab = parsed.activeTab || 'team';
-      return parsed;
-    }
-  } catch(e) { console.error('load failed', e); }
+function defaultState() {
   return {
     tasks: JSON.parse(JSON.stringify(DEFAULT_TASKS)),
     members: JSON.parse(JSON.stringify(DEFAULT_MEMBERS)),
     checklist: JSON.parse(JSON.stringify(DEFAULT_CHECKLIST)),
     selectedTaskId: null,
     activeTab: 'team',
+    expandedTasks: {},
+    filters: {phase:'all', status:'all', owner:'all', unassigned:false, dueSoon:false, query:''},
   };
+}
+
+function loadState() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) return migrateState(JSON.parse(saved));
+  } catch(e) { console.error('load failed', e); }
+  return migrateState(defaultState());
+}
+
+function migrateState(data) {
+  const base = defaultState();
+  const next = Object.assign(base, data || {});
+  next.tasks = (next.tasks && next.tasks.length ? next.tasks : DEFAULT_TASKS).map((task, taskIdx) => {
+    const migrated = Object.assign({}, task);
+    if (!Array.isArray(migrated.periods) || migrated.periods.length === 0) {
+      migrated.periods = [{id:`${migrated.id || 't'+taskIdx}-p1`, start:migrated.start || todayStr(), end:migrated.end || addDays(todayStr(), 3)}];
+    }
+    migrated.periods = migrated.periods.map((p, idx) => ({
+      id:p.id || `${migrated.id}-p${idx+1}`,
+      start:p.start || todayStr(),
+      end:p.end || p.start || todayStr(),
+    }));
+    if (!Array.isArray(migrated.subtasks)) migrated.subtasks = [];
+    if (typeof migrated.manualProgress !== 'number') migrated.manualProgress = Number(migrated.progress || 0);
+    delete migrated.start;
+    delete migrated.end;
+    delete migrated.progress;
+    migrated.owners = migrated.owners || [];
+    migrated.status = migrated.status || 'todo';
+    migrated.memo = migrated.memo || '';
+    return migrated;
+  });
+  next.members = next.members || [];
+  next.checklist = next.checklist || JSON.parse(JSON.stringify(DEFAULT_CHECKLIST));
+  next.expandedTasks = next.expandedTasks || {};
+  next.filters = Object.assign({phase:'all', status:'all', owner:'all', unassigned:false, dueSoon:false, query:''}, next.filters || {});
+  if (next.selectedTaskId && !next.tasks.some(t => t.id === next.selectedTaskId)) next.selectedTaskId = null;
+  return next;
 }
 
 function saveState() {
@@ -460,41 +582,83 @@ function dateToStr(d) {
   return `${y}-${m}-${dd}`;
 }
 function daysBetween(a, b) { return Math.round((parseDate(b) - parseDate(a)) / 86400000); }
-function addDays(s, n) {
-  const d = parseDate(s); d.setDate(d.getDate()+n);
-  return dateToStr(d);
-}
+function addDays(s, n) { const d = parseDate(s); d.setDate(d.getDate()+n); return dateToStr(d); }
 function isWeekend(s) { const d = parseDate(s).getDay(); return d===0 || d===6; }
 function isHoliday(s) { return !!HOLIDAYS_2026[s]; }
 function dayName(s) { return ['일','월','화','수','목','금','토'][parseDate(s).getDay()]; }
 function todayStr() { return dateToStr(new Date()); }
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function initials(name) {
+  if (!name) return '?';
+  const trimmed = name.trim();
+  if (/[가-힣]/.test(trimmed)) return trimmed.charAt(0);
+  const parts = trimmed.split(/\s+/);
+  return parts.length >= 2 ? (parts[0][0] + parts[parts.length-1][0]).toUpperCase() : trimmed.substring(0, 2).toUpperCase();
+}
+function taskProgress(t) {
+  if (t.subtasks && t.subtasks.length) {
+    return Math.round((t.subtasks.filter(s => s.done).length / t.subtasks.length) * 100);
+  }
+  return Math.max(0, Math.min(100, Number(t.manualProgress || 0)));
+}
+function phaseProgress(phase) {
+  const tasks = state.tasks.filter(t => Number(t.phase) === Number(phase));
+  return tasks.length ? Math.round(tasks.reduce((sum, t) => sum + taskProgress(t), 0) / tasks.length) : 0;
+}
+function taskPeriodBounds(t) {
+  const periods = t.periods || [];
+  if (!periods.length) return {start:todayStr(), end:todayStr()};
+  return {
+    start:periods.map(p => p.start).sort()[0],
+    end:periods.map(p => p.end).sort().slice(-1)[0],
+  };
+}
+function isDueSoon(t) {
+  const today = todayStr();
+  const futureEnds = (t.periods || []).map(p => p.end).filter(end => daysBetween(today, end) >= 0).sort();
+  if (!futureEnds.length) return false;
+  const diff = daysBetween(today, futureEnds[0]);
+  return diff >= 0 && diff <= 3;
+}
+function filteredTasks() {
+  const f = state.filters;
+  const query = (f.query || '').trim().toLowerCase();
+  return state.tasks.filter(t => {
+    if (f.phase !== 'all' && String(t.phase) !== f.phase) return false;
+    if (f.status !== 'all' && t.status !== f.status) return false;
+    if (f.owner !== 'all' && !(t.owners || []).includes(f.owner)) return false;
+    if (f.unassigned && (t.owners || []).length) return false;
+    if (f.dueSoon && !isDueSoon(t)) return false;
+    if (query && !t.name.toLowerCase().includes(query)) return false;
+    return true;
+  });
+}
+function hasActiveFilters() {
+  const f = state.filters;
+  return f.phase !== 'all' || f.status !== 'all' || f.owner !== 'all' || f.unassigned || f.dueSoon || !!(f.query || '').trim();
+}
 
 // ============ KPI ============
 function renderKPI() {
-  const today = new Date(); today.setHours(0,0,0,0);
   const sub = new Date(SUBMIT_DATE+'T17:00:00');
   const dday = Math.ceil((sub - new Date()) / 86400000);
   document.getElementById('kpi-dday').textContent = dday >= 0 ? dday : 'D+' + Math.abs(dday);
 
-  const total = state.tasks.length;
-  const done = state.tasks.filter(t => t.status==='done').length;
-  const progress = state.tasks.filter(t => t.status==='progress').length;
-  const todo = state.tasks.filter(t => t.status==='todo').length;
-  const unassigned = state.tasks.filter(t => !t.owners || t.owners.length===0).length;
-
-  const totalProgress = total ? Math.round(state.tasks.reduce((s,t) => {
-    if (t.status==='done') return s + 100;
-    if (t.status==='progress') return s + (t.progress||50);
-    return s;
-  }, 0) / total) : 0;
-
+  const totalProgress = state.tasks.length
+    ? Math.round(state.tasks.reduce((sum, t) => sum + taskProgress(t), 0) / state.tasks.length)
+    : 0;
   document.getElementById('kpi-progress').textContent = totalProgress;
   document.getElementById('kpi-progress-bar').style.width = totalProgress + '%';
-  document.getElementById('kpi-done').textContent = done;
-  document.getElementById('kpi-total').textContent = total;
-  document.getElementById('kpi-inprogress').textContent = progress;
-  document.getElementById('kpi-todo').textContent = todo;
-  document.getElementById('kpi-unassigned').textContent = unassigned;
+
+  [1,2,3,4].forEach(n => {
+    const pct = phaseProgress(n);
+    document.getElementById(`kpi-p${n}`).textContent = pct + '%';
+  });
+  document.getElementById('kpi-p12-bar').style.width = Math.round((phaseProgress(1) + phaseProgress(2)) / 2) + '%';
+  document.getElementById('kpi-p34-bar').style.width = Math.round((phaseProgress(3) + phaseProgress(4)) / 2) + '%';
 }
 
 // ============ GANTT ============
@@ -503,7 +667,6 @@ function renderGantt() {
   const days = daysBetween(PROJECT_START, PROJECT_END) + 1;
   const today = todayStr();
 
-  // Build header
   let dateCells = '';
   for (let i = 0; i < days; i++) {
     const d = addDays(PROJECT_START, i);
@@ -512,19 +675,14 @@ function renderGantt() {
     if (isWeekend(d)) classes.push('weekend');
     if (isHoliday(d)) classes.push('holiday');
     if (dt.getDate() === 1) classes.push('month-start');
-    const display = dt.getDate() === 1 || i === 0
-      ? `${dt.getMonth()+1}/${dt.getDate()}`
-      : `${dt.getDate()}`;
+    const display = dt.getDate() === 1 || i === 0 ? `${dt.getMonth()+1}/${dt.getDate()}` : `${dt.getDate()}`;
     dateCells += `<div class="gantt-date-cell ${classes.join(' ')}">${display}<span class="day">${dayName(d)}</span></div>`;
   }
 
-  // Build phase rows
   let phaseRows = '';
   Object.entries(PHASES).forEach(([num, phase]) => {
     const startOffset = daysBetween(PROJECT_START, phase.start);
     const duration = daysBetween(phase.start, phase.end) + 1;
-    const leftPct = (startOffset / days) * 100;
-    const widthPct = (duration / days) * 100;
     phaseRows += `
       <div class="gantt-row phase-row" data-phase="${num}">
         <div class="gantt-task-info">
@@ -533,57 +691,61 @@ function renderGantt() {
         </div>
         <div class="gantt-timeline">
           ${buildDayCells(days, today)}
-          <div class="gantt-bar phase-bar" style="left:${leftPct}%;width:${widthPct}%;background:${phase.color}">
-            ${phase.name}
-          </div>
+          <div class="gantt-bar phase-bar" style="left:${(startOffset / days) * 100}%;width:${(duration / days) * 100}%;background:${phase.color}">${phase.name}</div>
         </div>
       </div>`;
   });
 
-  // Build task rows
   let taskRows = '';
   state.tasks.forEach(task => {
-    const startOffset = daysBetween(PROJECT_START, task.start);
-    const duration = daysBetween(task.start, task.end) + 1;
-    const leftPct = (startOffset / days) * 100;
-    const widthPct = (duration / days) * 100;
     const phaseColor = `var(--p${task.phase})`;
     const ownersHtml = (task.owners||[]).slice(0,3).map(oid => {
       const m = state.members.find(x => x.id===oid);
-      if (!m) return '';
-      return `<div class="owner-chip" title="${escapeHtml(m.name)}">${initials(m.name)}</div>`;
+      return m ? `<div class="owner-chip" title="${escapeHtml(m.name)}">${initials(m.name)}</div>` : '';
     }).join('');
     const moreOwners = (task.owners||[]).length > 3 ? `<div class="owner-chip">+${task.owners.length-3}</div>` : '';
     const statusClass = task.status==='done' ? 'completed' : (task.status==='progress' ? 'in-progress' : '');
     const barLabel = task.name.length > 20 ? task.name.substring(0,18)+'…' : task.name;
+    const prog = taskProgress(task);
+    const expanded = !!state.expandedTasks[task.id];
+    const bars = (task.periods || []).map(period => {
+      const startOffset = daysBetween(PROJECT_START, period.start);
+      const duration = daysBetween(period.start, period.end) + 1;
+      const isSelected = selectedPeriod && selectedPeriod.taskId === task.id && selectedPeriod.periodId === period.id;
+      return `<div class="gantt-bar ${statusClass} ${isSelected?'selected':''}" 
+          data-task-id="${task.id}" data-period-id="${period.id}"
+          style="left:${(startOffset / days) * 100}%;width:${(duration / days) * 100}%;background:${phaseColor};--progress:${prog}%"
+          onclick="selectPeriod(event, '${task.id}', '${period.id}')"
+          onmousedown="startPeriodDrag(event, '${task.id}', '${period.id}', 'move')"
+          onmouseenter="showTooltip(event, '${task.id}', '${period.id}')"
+          onmouseleave="hideTooltip()">
+          <span class="gantt-handle left" onmousedown="startPeriodDrag(event, '${task.id}', '${period.id}', 'start')"></span>
+          ${escapeHtml(barLabel)}
+          <span class="gantt-handle right" onmousedown="startPeriodDrag(event, '${task.id}', '${period.id}', 'end')"></span>
+        </div>`;
+    }).join('');
 
     taskRows += `
       <div class="gantt-row" data-task-id="${task.id}">
         <div class="gantt-task-info">
+          <button class="gantt-toggle" onclick="toggleTaskExpanded(event, '${task.id}')">${expanded?'▼':'▶'}</button>
           <span class="phase-tag p${task.phase}">P${task.phase}</span>
           <span class="gantt-task-name" onclick="selectTask('${task.id}')">${escapeHtml(task.name)}</span>
           <div class="gantt-task-owners">${ownersHtml}${moreOwners}</div>
         </div>
         <div class="gantt-timeline">
           ${buildDayCells(days, today)}
-          <div class="gantt-bar ${statusClass}" 
-               style="left:${leftPct}%;width:${widthPct}%;background:${phaseColor};--progress:${task.progress||0}%"
-               onclick="selectTask('${task.id}')"
-               onmouseenter="showTooltip(event, '${task.id}')"
-               onmouseleave="hideTooltip()">
-            ${escapeHtml(barLabel)}
-          </div>
+          ${bars}
         </div>
-      </div>`;
+      </div>
+      ${expanded ? renderGanttSubtaskRows(task, days, today) : ''}`;
   });
 
-  // Milestones row
   let milestonesHtml = '';
   MILESTONES.forEach(m => {
     const offset = daysBetween(PROJECT_START, m.date);
-    const leftPct = (offset / days) * 100 + (50 / days);
     milestonesHtml += `<div class="gantt-milestone ${m.critical?'critical':''}" 
-      style="left:${leftPct}%" 
+      style="left:${(offset / days) * 100 + (50 / days)}%" 
       data-label="${escapeHtml(m.label)}"
       onmouseenter="showMilestoneTooltip(event, '${escapeHtml(m.label)}', '${m.date}')"
       onmouseleave="hideTooltip()"></div>`;
@@ -591,10 +753,7 @@ function renderGantt() {
   const milestonesRow = `
     <div class="gantt-row" style="min-height:42px;background:var(--g0);border-bottom:1px solid var(--border)">
       <div class="gantt-task-info"><span style="font-size:11px;color:var(--g6);font-weight:600">📍 마일스톤</span></div>
-      <div class="gantt-timeline" style="position:relative">
-        ${buildDayCells(days, today)}
-        ${milestonesHtml}
-      </div>
+      <div class="gantt-timeline" style="position:relative">${buildDayCells(days, today)}${milestonesHtml}</div>
     </div>`;
 
   wrap.innerHTML = `
@@ -607,6 +766,18 @@ function renderGantt() {
       ${phaseRows}
       ${taskRows}
     </div>`;
+}
+
+function renderGanttSubtaskRows(task, days, today) {
+  const items = task.subtasks && task.subtasks.length ? task.subtasks : [{id:'empty', text:'서브태스크 없음', done:false}];
+  return items.map(st => `
+    <div class="gantt-row subtask-row">
+      <div class="gantt-task-info" style="padding-left:42px">
+        ${st.id === 'empty' ? '' : `<input type="checkbox" ${st.done?'checked':''} onclick="toggleSubtask('${task.id}', '${st.id}')">`}
+        <span class="gantt-subtask-text ${st.done?'done':''}">${escapeHtml(st.text)}</span>
+      </div>
+      <div class="gantt-timeline">${buildDayCells(days, today)}</div>
+    </div>`).join('');
 }
 
 function buildDayCells(days, today) {
@@ -622,38 +793,87 @@ function buildDayCells(days, today) {
   return html;
 }
 
-function escapeHtml(s) {
-  if (s == null) return '';
-  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function toggleTaskExpanded(event, taskId) {
+  event.stopPropagation();
+  state.expandedTasks[taskId] = !state.expandedTasks[taskId];
+  saveState();
+  renderGantt();
 }
 
-function initials(name) {
-  if (!name) return '?';
-  const trimmed = name.trim();
-  if (/[가-힣]/.test(trimmed)) {
-    // Korean: 첫 글자
-    return trimmed.charAt(0);
+function selectPeriod(event, taskId, periodId) {
+  event.stopPropagation();
+  selectedPeriod = {taskId, periodId};
+  selectTask(taskId);
+  renderGantt();
+}
+
+function startPeriodDrag(event, taskId, periodId, mode) {
+  event.stopPropagation();
+  const task = state.tasks.find(t => t.id === taskId);
+  const period = task && task.periods.find(p => p.id === periodId);
+  if (!task || !period) return;
+  const isSelected = selectedPeriod && selectedPeriod.taskId === taskId && selectedPeriod.periodId === periodId;
+  if (!isSelected) return;
+  const timeline = event.currentTarget.closest('.gantt-timeline');
+  dragState = {
+    taskId, periodId, mode,
+    startX:event.clientX,
+    originalStart:period.start,
+    originalEnd:period.end,
+    dayWidth:timeline.getBoundingClientRect().width / (daysBetween(PROJECT_START, PROJECT_END) + 1),
+  };
+  event.currentTarget.closest('.gantt-bar').classList.add('dragging');
+  document.addEventListener('mousemove', onPeriodDrag);
+  document.addEventListener('mouseup', endPeriodDrag);
+}
+
+function onPeriodDrag(event) {
+  if (!dragState) return;
+  const task = state.tasks.find(t => t.id === dragState.taskId);
+  const period = task && task.periods.find(p => p.id === dragState.periodId);
+  if (!period) return;
+  const deltaDays = Math.round((event.clientX - dragState.startX) / dragState.dayWidth);
+  if (dragState.mode === 'move') {
+    period.start = addDays(dragState.originalStart, deltaDays);
+    period.end = addDays(dragState.originalEnd, deltaDays);
+  } else if (dragState.mode === 'start') {
+    const nextStart = addDays(dragState.originalStart, deltaDays);
+    if (daysBetween(nextStart, period.end) >= 0) period.start = nextStart;
+  } else {
+    const nextEnd = addDays(dragState.originalEnd, deltaDays);
+    if (daysBetween(period.start, nextEnd) >= 0) period.end = nextEnd;
   }
-  const parts = trimmed.split(/\s+/);
-  return parts.length >= 2
-    ? (parts[0][0] + parts[parts.length-1][0]).toUpperCase()
-    : trimmed.substring(0, 2).toUpperCase();
+  showDragTooltip(event, period.start, period.end);
+  renderGantt();
+}
+
+function endPeriodDrag() {
+  if (!dragState) return;
+  dragState = null;
+  document.removeEventListener('mousemove', onPeriodDrag);
+  document.removeEventListener('mouseup', endPeriodDrag);
+  hideTooltip();
+  saveState();
+  renderAll();
 }
 
 // ============ TOOLTIP ============
-function showTooltip(e, taskId) {
+function showTooltip(e, taskId, periodId) {
   const t = state.tasks.find(x => x.id===taskId);
   if (!t) return;
+  const period = (t.periods || []).find(p => p.id === periodId) || taskPeriodBounds(t);
   const tip = document.getElementById('tooltip');
   const owners = (t.owners||[]).map(oid => {
     const m = state.members.find(x => x.id===oid); return m ? m.name : null;
   }).filter(Boolean).join(', ') || '<i style="color:#aaa">미배정</i>';
   const statusText = {todo:'대기', progress:'진행 중', done:'완료'}[t.status];
-  tip.innerHTML = `<b>${escapeHtml(t.name)}</b><br>
-    ${t.start} → ${t.end}<br>
-    상태: ${statusText} · 진행률 ${t.progress||0}%<br>
-    담당: ${owners}<br>
-    ${t.memo ? '<i style="color:#bbb">'+escapeHtml(t.memo)+'</i>' : ''}`;
+  tip.innerHTML = `<b>${escapeHtml(t.name)}</b><br>${period.start} → ${period.end}<br>상태: ${statusText} · 진행률 ${taskProgress(t)}%<br>담당: ${owners}<br>${t.memo ? '<i style="color:#bbb">'+escapeHtml(t.memo)+'</i>' : ''}`;
+  positionTooltip(e);
+  tip.classList.add('show');
+}
+function showDragTooltip(e, start, end) {
+  const tip = document.getElementById('tooltip');
+  tip.innerHTML = `<b>기간 조정</b><br>${start} → ${end}`;
   positionTooltip(e);
   tip.classList.add('show');
 }
@@ -671,39 +891,78 @@ function positionTooltip(e) {
 function hideTooltip() { document.getElementById('tooltip').classList.remove('show'); }
 document.addEventListener('mousemove', e => {
   const tip = document.getElementById('tooltip');
-  if (tip.classList.contains('show')) positionTooltip(e);
+  if (tip.classList.contains('show') && !dragState) positionTooltip(e);
+});
+document.addEventListener('click', e => {
+  if (!isAuthed() || !selectedPeriod) return;
+  if (!e.target.closest('.gantt-bar')) {
+    selectedPeriod = null;
+    renderGantt();
+  }
 });
 
 // ============ TASK LIST ============
+function renderTaskFilters() {
+  const f = state.filters;
+  const ownerOptions = state.members.map(m => `<option value="${m.id}" ${f.owner===m.id?'selected':''}>${escapeHtml(m.name)}</option>`).join('');
+  document.getElementById('task-filterbar').innerHTML = `
+    <select class="filter-select" onchange="setFilter('phase', this.value)">
+      <option value="all">전체 단계</option>
+      <option value="1" ${f.phase==='1'?'selected':''}>P1</option>
+      <option value="2" ${f.phase==='2'?'selected':''}>P2</option>
+      <option value="3" ${f.phase==='3'?'selected':''}>P3</option>
+      <option value="4" ${f.phase==='4'?'selected':''}>P4</option>
+    </select>
+    <select class="filter-select" onchange="setFilter('status', this.value)">
+      <option value="all">전체 상태</option>
+      <option value="todo" ${f.status==='todo'?'selected':''}>대기</option>
+      <option value="progress" ${f.status==='progress'?'selected':''}>진행 중</option>
+      <option value="done" ${f.status==='done'?'selected':''}>완료</option>
+    </select>
+    <select class="filter-select" onchange="setFilter('owner', this.value)">
+      <option value="all">전체 담당자</option>${ownerOptions}
+    </select>
+    <label class="filter-check"><input type="checkbox" ${f.unassigned?'checked':''} onchange="setFilter('unassigned', this.checked)"> 미배정만</label>
+    <label class="filter-check"><input type="checkbox" ${f.dueSoon?'checked':''} onchange="setFilter('dueSoon', this.checked)"> 마감 임박만</label>
+    <input class="filter-search" value="${escapeHtml(f.query)}" placeholder="작업명 검색" oninput="setFilter('query', this.value)">
+    ${hasActiveFilters() ? '<button class="btn btn-sm" onclick="resetFilters()">필터 초기화</button>' : ''}
+  `;
+}
+
 function renderTaskList() {
+  renderTaskFilters();
   const tbody = document.getElementById('task-tbody');
-  tbody.innerHTML = state.tasks.map(t => {
+  tbody.innerHTML = filteredTasks().map(t => {
     const ownersHtml = (t.owners||[]).slice(0,4).map(oid => {
       const m = state.members.find(x => x.id===oid);
       return m ? `<div class="owner-chip" title="${escapeHtml(m.name)}">${initials(m.name)}</div>` : '';
     }).join('');
     const moreOwners = (t.owners||[]).length > 4 ? `<div class="owner-chip">+${t.owners.length-4}</div>` : '';
-    const statusInfo = {
-      todo: ['status-todo', '대기'],
-      progress: ['status-progress', '진행'],
-      done: ['status-done', '완료']
-    }[t.status];
-    const prog = t.status==='done' ? 100 : (t.progress||0);
+    const statusInfo = {todo:['status-todo','대기'], progress:['status-progress','진행'], done:['status-done','완료']}[t.status];
+    const prog = taskProgress(t);
     const selected = state.selectedTaskId === t.id ? 'selected' : '';
-    return `<tr class="${selected}" onclick="selectTask('${t.id}')">
+    const dueSoon = isDueSoon(t) ? 'due-soon' : '';
+    const bounds = taskPeriodBounds(t);
+    return `<tr class="${selected} ${dueSoon}" onclick="selectTask('${t.id}')">
       <td><span class="phase-tag p${t.phase}">P${t.phase}</span></td>
-      <td style="font-weight:500">${escapeHtml(t.name)}</td>
-      <td style="color:var(--g6);font-size:11px">${t.start.substring(5)} ~ ${t.end.substring(5)}</td>
+      <td style="font-weight:500">${isDueSoon(t)?'🔴 ':''}${escapeHtml(t.name)}</td>
+      <td style="color:var(--g6);font-size:11px">${bounds.start.substring(5)} ~ ${bounds.end.substring(5)}</td>
       <td><div style="display:flex;gap:2px">${ownersHtml||'<span style="color:var(--g4);font-size:11px">—</span>'}${moreOwners}</div></td>
       <td><span class="status-pill ${statusInfo[0]}">${statusInfo[1]}</span></td>
-      <td>
-        <div class="progress-mini">
-          <div class="progress-mini-bar"><div class="progress-mini-fill" style="width:${prog}%"></div></div>
-          <div class="progress-mini-text">${prog}%</div>
-        </div>
-      </td>
+      <td><div class="progress-mini"><div class="progress-mini-bar"><div class="progress-mini-fill" style="width:${prog}%"></div></div><div class="progress-mini-text">${prog}%</div></div></td>
     </tr>`;
   }).join('');
+}
+
+function setFilter(key, value) {
+  state.filters[key] = value;
+  saveState();
+  renderAll();
+}
+function resetFilters() {
+  state.filters = {phase:'all', status:'all', owner:'all', unassigned:false, dueSoon:false, query:''};
+  saveState();
+  renderAll();
 }
 
 // ============ TABS ============
@@ -734,17 +993,10 @@ function renderMembers() {
       <button class="member-remove" onclick="removeMember('${m.id}')" title="삭제">×</button>
       <div class="member-head">
         <div class="member-avatar">${initials(m.name)}</div>
-        <input class="member-name" value="${escapeHtml(m.name)}" 
-               placeholder="이름" 
-               onchange="updateMember('${m.id}', 'name', this.value)">
+        <input class="member-name" value="${escapeHtml(m.name)}" placeholder="이름" onchange="updateMember('${m.id}', 'name', this.value)">
       </div>
-      <textarea class="member-role" rows="2" 
-                placeholder="역할 · 담당 분야 (예: 매스/입면 · 패널 디자인 · 도면 컬러링)" 
-                onchange="updateMember('${m.id}', 'role', this.value)">${escapeHtml(m.role||'')}</textarea>
-      <div class="member-stat">
-        <span>배정된 작업</span>
-        <span><b>${taskCount}</b>건</span>
-      </div>
+      <textarea class="member-role" rows="2" placeholder="역할 · 담당 분야 (예: 매스/입면 · 패널 디자인 · 도면 컬러링)" onchange="updateMember('${m.id}', 'role', this.value)">${escapeHtml(m.role||'')}</textarea>
+      <div class="member-stat"><span>배정된 작업</span><span><b>${taskCount}</b>건</span></div>
     </div>`;
   }).join('');
 }
@@ -753,10 +1005,7 @@ function addMember() {
   const id = 'm' + Date.now();
   state.members.push({id, name:'신규 팀원', role:''});
   saveState();
-  renderMembers();
-  renderTaskDetail();
-  renderKPI();
-  // 새 카드의 이름 인풋에 포커스
+  renderAll();
   setTimeout(() => {
     const newCard = document.querySelector(`[data-member-id="${id}"] .member-name`);
     if (newCard) { newCard.focus(); newCard.select(); }
@@ -768,8 +1017,7 @@ function updateMember(id, field, value) {
   if (m) {
     m[field] = value;
     saveState();
-    // 이름 변경 시 간트/리스트도 갱신
-    if (field === 'name') { renderGantt(); renderTaskList(); renderMembers(); renderTaskDetail(); }
+    renderAll();
   }
 }
 
@@ -788,9 +1036,7 @@ function selectTask(id) {
   state.selectedTaskId = id;
   state.activeTab = 'task';
   saveState();
-  switchTab('task');
-  renderTaskList();
-  renderTaskDetail();
+  renderAll();
 }
 
 function renderTaskDetail() {
@@ -805,6 +1051,21 @@ function renderTaskDetail() {
   }
 
   const phaseInfo = PHASES[t.phase];
+  const prog = taskProgress(t);
+  const hasSubtasks = !!(t.subtasks && t.subtasks.length);
+  const doneCount = (t.subtasks || []).filter(s => s.done).length;
+  const periodItems = (t.periods || []).map(p => `
+    <div class="period-item">
+      <input class="detail-input" type="date" value="${p.start}" onchange="updatePeriod('${t.id}', '${p.id}', 'start', this.value)">
+      <input class="detail-input" type="date" value="${p.end}" onchange="updatePeriod('${t.id}', '${p.id}', 'end', this.value)">
+      <button class="period-remove" title="삭제" onclick="removePeriod('${t.id}', '${p.id}')">×</button>
+    </div>`).join('');
+  const subtaskItems = (t.subtasks || []).map(st => `
+    <div class="subtask-edit-item ${st.done?'done':''}">
+      <input type="checkbox" ${st.done?'checked':''} onchange="toggleSubtask('${t.id}', '${st.id}')">
+      <input class="subtask-input" value="${escapeHtml(st.text)}" onchange="updateSubtask('${t.id}', '${st.id}', this.value)">
+      <button class="subtask-remove" title="삭제" onclick="removeSubtask('${t.id}', '${st.id}')">×</button>
+    </div>`).join('');
   container.innerHTML = `
     <div class="detail-field">
       <div class="detail-label">단계</div>
@@ -816,18 +1077,14 @@ function renderTaskDetail() {
 
     <div class="detail-field">
       <div class="detail-label">작업명</div>
-      <input class="detail-input" value="${escapeHtml(t.name)}" 
+      <input class="detail-input" id="task-name-input" value="${escapeHtml(t.name)}" 
              onchange="updateTask('${t.id}', 'name', this.value)">
     </div>
 
     <div class="detail-field">
       <div class="detail-label">기간</div>
-      <div class="detail-row">
-        <input class="detail-input" type="date" value="${t.start}" 
-               onchange="updateTask('${t.id}', 'start', this.value)">
-        <input class="detail-input" type="date" value="${t.end}" 
-               onchange="updateTask('${t.id}', 'end', this.value)">
-      </div>
+      <div class="period-list">${periodItems}</div>
+      <button class="btn btn-sm" style="margin-top:8px" onclick="addPeriod('${t.id}')">+ 기간 추가</button>
     </div>
 
     <div class="detail-field">
@@ -856,12 +1113,22 @@ function renderTaskDetail() {
     </div>
 
     <div class="detail-field">
-      <div class="detail-label">진행률 ${t.progress||0}%</div>
+      <div class="detail-label">진행률 ${prog}%</div>
       <div class="progress-input">
-        <input type="range" min="0" max="100" step="5" value="${t.progress||0}" 
-               oninput="updateTask('${t.id}', 'progress', parseInt(this.value))">
-        <input type="number" min="0" max="100" value="${t.progress||0}" 
-               onchange="updateTask('${t.id}', 'progress', parseInt(this.value)||0)">
+        <input type="range" min="0" max="100" step="5" value="${prog}" ${hasSubtasks?'disabled':''}
+               oninput="updateTask('${t.id}', 'manualProgress', parseInt(this.value))">
+        <input type="number" min="0" max="100" value="${prog}" ${hasSubtasks?'disabled':''}
+               onchange="updateTask('${t.id}', 'manualProgress', parseInt(this.value)||0)">
+      </div>
+      <div class="kpi-sub">${hasSubtasks ? '서브태스크 완료율로 자동 계산됩니다.' : '서브태스크가 없어 수동 입력을 사용합니다.'}</div>
+    </div>
+
+    <div class="detail-field">
+      <div class="detail-label">서브태스크 <span class="subtask-count">완료 ${doneCount}/전체 ${(t.subtasks||[]).length}</span></div>
+      <div class="subtask-list">${subtaskItems || '<div style="font-size:11px;color:var(--g4)">아직 서브태스크가 없습니다.</div>'}</div>
+      <div class="subtask-add">
+        <input placeholder="+ 서브태스크 추가" onkeypress="if(event.key==='Enter'){addSubtask('${t.id}', this.value); this.value='';}">
+        <button class="btn btn-sm" onclick="const i=this.previousElementSibling;addSubtask('${t.id}', i.value);i.value='';">추가</button>
       </div>
     </div>
 
@@ -870,24 +1137,128 @@ function renderTaskDetail() {
       <textarea class="detail-textarea" placeholder="메모·세부 지침·체크사항 등"
                 onchange="updateTask('${t.id}', 'memo', this.value)">${escapeHtml(t.memo||'')}</textarea>
     </div>
+
+    <button class="btn btn-danger" style="width:100%;justify-content:center" onclick="deleteTask('${t.id}')">작업 삭제</button>
   `;
+  if (focusTaskNameOnRender) {
+    focusTaskNameOnRender = false;
+    setTimeout(() => {
+      const input = document.getElementById('task-name-input');
+      if (input) { input.focus(); input.select(); }
+    }, 50);
+  }
 }
 
 function updateTask(id, field, value) {
   const t = state.tasks.find(x => x.id===id);
   if (!t) return;
   t[field] = value;
-  // status 변경 시 progress 자동 처리
-  if (field === 'status') {
-    if (value === 'done') t.progress = 100;
-    else if (value === 'todo') t.progress = 0;
-    else if (value === 'progress' && (!t.progress || t.progress === 0 || t.progress === 100)) t.progress = 50;
+  if (field === 'manualProgress') {
+    t.manualProgress = Math.max(0, Math.min(100, Number(value || 0)));
+    if (t.manualProgress >= 100) t.status = 'done';
+    else if (t.manualProgress > 0 && t.status === 'todo') t.status = 'progress';
+    else if (t.manualProgress === 0 && t.status === 'progress') t.status = 'todo';
   }
-  if (field === 'progress') {
-    if (value >= 100) t.status = 'done';
-    else if (value > 0 && t.status === 'todo') t.status = 'progress';
-    else if (value === 0 && t.status === 'progress') t.status = 'todo';
+  saveState();
+  renderAll();
+}
+
+function updatePeriod(taskId, periodId, field, value) {
+  const t = state.tasks.find(x => x.id===taskId);
+  const p = t && t.periods.find(x => x.id===periodId);
+  if (!p) return;
+  p[field] = value;
+  if (daysBetween(p.start, p.end) < 0) {
+    if (field === 'start') p.end = p.start;
+    else p.start = p.end;
   }
+  saveState();
+  renderAll();
+}
+
+function addPeriod(taskId) {
+  const t = state.tasks.find(x => x.id===taskId);
+  if (!t) return;
+  const lastEnd = (t.periods || []).map(p => p.end).sort().slice(-1)[0] || todayStr();
+  const start = addDays(lastEnd, 1);
+  t.periods.push({id:'p'+Date.now(), start, end:addDays(start, 2)});
+  saveState();
+  renderAll();
+}
+
+function removePeriod(taskId, periodId) {
+  const t = state.tasks.find(x => x.id===taskId);
+  if (!t) return;
+  if ((t.periods || []).length <= 1) { alert('기간은 최소 1개가 필요합니다.'); return; }
+  t.periods = t.periods.filter(p => p.id !== periodId);
+  if (selectedPeriod && selectedPeriod.periodId === periodId) selectedPeriod = null;
+  saveState();
+  renderAll();
+}
+
+function toggleSubtask(taskId, subtaskId) {
+  const t = state.tasks.find(x => x.id===taskId);
+  const st = t && t.subtasks.find(x => x.id===subtaskId);
+  if (!st) return;
+  st.done = !st.done;
+  const prog = taskProgress(t);
+  if (prog >= 100) t.status = 'done';
+  else if (prog > 0 && t.status === 'todo') t.status = 'progress';
+  else if (prog === 0 && t.status === 'progress') t.status = 'todo';
+  saveState();
+  renderAll();
+}
+
+function updateSubtask(taskId, subtaskId, text) {
+  const t = state.tasks.find(x => x.id===taskId);
+  const st = t && t.subtasks.find(x => x.id===subtaskId);
+  if (!st) return;
+  st.text = text;
+  saveState();
+  renderAll();
+}
+
+function addSubtask(taskId, text) {
+  if (!text || !text.trim()) return;
+  const t = state.tasks.find(x => x.id===taskId);
+  if (!t) return;
+  t.subtasks = t.subtasks || [];
+  t.subtasks.push({id:'s'+Date.now(), text:text.trim(), done:false});
+  saveState();
+  renderAll();
+}
+
+function removeSubtask(taskId, subtaskId) {
+  const t = state.tasks.find(x => x.id===taskId);
+  if (!t) return;
+  t.subtasks = (t.subtasks || []).filter(st => st.id !== subtaskId);
+  saveState();
+  renderAll();
+}
+
+function addTask() {
+  const id = 't' + Date.now();
+  const today = todayStr();
+  state.tasks.push({
+    id, phase:1, name:'새 작업',
+    periods:[{id:'p'+Date.now(), start:today, end:addDays(today, 3)}],
+    owners:[], status:'todo', memo:'', subtasks:[],
+  });
+  state.selectedTaskId = id;
+  state.activeTab = 'task';
+  focusTaskNameOnRender = true;
+  saveState();
+  renderAll();
+}
+
+function deleteTask(taskId) {
+  const t = state.tasks.find(x => x.id===taskId);
+  if (!t) return;
+  if (!confirm(`'${t.name}' 작업을 삭제할까요?`)) return;
+  state.tasks = state.tasks.filter(x => x.id !== taskId);
+  delete state.expandedTasks[taskId];
+  if (state.selectedTaskId === taskId) state.selectedTaskId = null;
+  if (selectedPeriod && selectedPeriod.taskId === taskId) selectedPeriod = null;
   saveState();
   renderAll();
 }
@@ -937,14 +1308,14 @@ function renderChecklist() {
 
 function toggleCheck(section, id) {
   const item = state.checklist[section].find(i => i.id===id);
-  if (item) { item.done = !item.done; saveState(); renderChecklist(); }
+  if (item) { item.done = !item.done; saveState(); renderAll(); }
 }
 
 function addCheckItem(section, text) {
   if (!text || !text.trim()) return;
   state.checklist[section].push({id: 'c'+Date.now(), text: text.trim(), done: false});
   saveState();
-  renderChecklist();
+  renderAll();
 }
 
 // ============ IMPORT/EXPORT ============
@@ -971,7 +1342,7 @@ function importJSON() {
       try {
         const data = JSON.parse(ev.target.result);
         if (!confirm('현재 데이터를 덮어쓰고 복원할까요?')) return;
-        state = data;
+        state = migrateState(data);
         saveState();
         renderAll();
         alert('복원 완료');
@@ -989,8 +1360,61 @@ function resetAll() {
   renderAll();
 }
 
+// ============ ACCESS ============
+function isAuthed() {
+  return sessionStorage.getItem('akj-authenticated') === 'true';
+}
+
+function applyAccessState() {
+  const authed = isAuthed();
+  document.querySelector('.app').classList.toggle('locked', !authed);
+  document.getElementById('pin-screen').classList.toggle('show', !authed);
+  if (!authed) {
+    setTimeout(() => document.getElementById('pin-input').focus(), 50);
+  }
+}
+
+function verifyPin() {
+  const input = document.getElementById('pin-input');
+  const error = document.getElementById('pin-error');
+  if (input.value === ACCESS_PIN) {
+    sessionStorage.setItem('akj-authenticated', 'true');
+    error.textContent = '';
+    input.value = '';
+    applyAccessState();
+    renderAll();
+  } else {
+    error.textContent = 'PIN이 올바르지 않습니다';
+    input.select();
+  }
+}
+
+function lockDashboard() {
+  sessionStorage.removeItem('akj-authenticated');
+  applyAccessState();
+}
+
+function renderEventBanner() {
+  const banner = document.getElementById('event-banner');
+  const today = todayStr();
+  const events = MILESTONES.filter(m => m.date === today);
+  if (!events.length) {
+    banner.classList.remove('show');
+    banner.innerHTML = '';
+    return;
+  }
+  banner.innerHTML = events.map(m => `📅 오늘 — ${escapeHtml(m.label)} · ${m.date}${m.time ? ' ' + escapeHtml(m.time) : ''}`).join(' · ');
+  banner.classList.add('show');
+}
+
 // ============ MAIN ============
 function renderAll() {
+  if (!isAuthed()) {
+    applyAccessState();
+    return;
+  }
+  applyAccessState();
+  renderEventBanner();
   renderKPI();
   renderGantt();
   renderTaskList();
@@ -1000,7 +1424,8 @@ function renderAll() {
   switchTab(state.activeTab);
 }
 
-renderAll();
+applyAccessState();
+if (isAuthed()) renderAll();
 </script>
 </body>
 </html>
