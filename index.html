@@ -62,8 +62,8 @@ html,body{font-family:'Pretendard',-apple-system,sans-serif;background:var(--g05
 .legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--g6);}
 .legend-swatch{width:10px;height:10px;border-radius:2px;}
 .gantt{min-width:1100px;position:relative;}
-.gantt-header{display:flex;border-bottom:1px solid var(--border);background:var(--g0);position:sticky;top:0;z-index:5;}
-.gantt-task-col{width:280px;flex-shrink:0;padding:8px 14px;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--g5);font-weight:500;border-right:1px solid var(--border);display:flex;align-items:center;}
+.gantt-header{display:flex;border-bottom:1px solid var(--border);background:var(--g0);position:sticky;top:0;z-index:8;}
+.gantt-task-col{width:280px;flex-shrink:0;padding:8px 14px;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--g5);font-weight:500;border-right:1px solid var(--border);display:flex;align-items:center;position:sticky;left:0;z-index:10;background:var(--g0);}
 .gantt-dates{display:flex;flex:1;}
 .gantt-date-cell{flex:1;min-width:24px;text-align:center;padding:6px 0;font-size:10px;color:var(--g5);border-right:1px solid var(--border-soft);}
 .gantt-date-cell.weekend,.gantt-date-cell.holiday{background:var(--g1);color:var(--red);}
@@ -75,7 +75,8 @@ html,body{font-family:'Pretendard',-apple-system,sans-serif;background:var(--g05
 .gantt-row:hover{background:var(--g05);}
 .gantt-row.phase-row{background:var(--g0);font-weight:600;}
 .gantt-row.phase-row:hover{background:var(--g1);}
-.gantt-task-info{width:280px;flex-shrink:0;padding:8px 14px;font-size:12px;display:flex;align-items:center;gap:8px;border-right:1px solid var(--border);}
+.gantt-row.phase-row .gantt-task-info{background:var(--g0);}
+.gantt-task-info{width:280px;flex-shrink:0;padding:8px 14px;font-size:12px;display:flex;align-items:center;gap:8px;border-right:1px solid var(--border);position:sticky;left:0;z-index:6;background:var(--white);}
 .gantt-task-info .phase-tag{font-size:9px;padding:1px 6px;border-radius:2px;color:var(--white);font-weight:500;letter-spacing:0.05em;flex-shrink:0;}
 .phase-tag.p1{background:var(--p1);} .phase-tag.p2{background:var(--p2);} .phase-tag.p3{background:var(--p3);} .phase-tag.p4{background:var(--p4);}
 .gantt-task-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;}
@@ -93,7 +94,7 @@ html,body{font-family:'Pretendard',-apple-system,sans-serif;background:var(--g05
 .gantt-bar.phase-bar{top:8px;bottom:8px;opacity:0.85;}
 .gantt-bar.completed{opacity:0.5;}
 .gantt-bar.completed::before{content:'✓ ';}
-.gantt-bar.in-progress{position:relative;}
+.gantt-bar.in-progress{}
 .gantt-bar.in-progress::after{content:'';position:absolute;left:0;top:0;bottom:0;background:rgba(255,255,255,0.25);width:var(--progress,0%);}
 
 .gantt-milestone{position:absolute;top:50%;width:18px;height:18px;background:var(--black);transform:translate(-50%,-50%) rotate(45deg);box-shadow:0 0 0 2px var(--white);cursor:pointer;z-index:2;}
@@ -208,7 +209,7 @@ html,body{font-family:'Pretendard',-apple-system,sans-serif;background:var(--g05
 <!-- TOPBAR -->
 <header class="topbar">
   <div class="topbar-logo"><span class="accent">AKJ</span> Schedule</div>
-  <div class="topbar-title">서울창업허브 관악 설계공모 · 2026.05.13 – 2026.08.13</div>
+  <div class="topbar-title">서울창업허브 관악 설계공모 · 2026.05.01 – 2026.08.14</div>
   <div class="topbar-actions">
     <button class="btn btn-sm" onclick="exportJSON()">📥 백업</button>
     <button class="btn btn-sm" onclick="importJSON()">📤 복원</button>
@@ -323,8 +324,8 @@ html,body{font-family:'Pretendard',-apple-system,sans-serif;background:var(--g05
 
 // ============ DATA MODEL ============
 const STORAGE_KEY = 'akj-schedule-v1';
-const PROJECT_START = '2026-05-13';
-const PROJECT_END   = '2026-08-21'; // 결과발표 + 약간
+const PROJECT_START = '2026-05-01';
+const PROJECT_END   = '2026-08-14';
 const SUBMIT_DATE   = '2026-07-21';
 
 const HOLIDAYS_2026 = {
