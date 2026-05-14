@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AKJ Schedule Dashboard · 서울창업허브 관악</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+:root{
+  --red:#e60235;--red-l:#fff0f3;--red-m:#ffd6df;--red-d:#b50029;
+  --black:#111;--g8:#222;--g7:#444;--g6:#555;--g5:#777;--g4:#999;--g3:#bbb;--g2:#e0e0e0;--g1:#f0f0f0;--g05:#f6f6f6;--g0:#fafafa;
+  --white:#fff;--border:#e8e8e8;--border-soft:#f0f0f0;
+  --p1:#2b6cb0;--p1-l:#dbeafe;
+  --p2:#7c3aed;--p2-l:#ede9fe;
+  --p3:#d97706;--p3-l:#fef3c7;
+  --p4:#dc2626;--p4-l:#fee2e2;
+  --shadow:0 1px 3px rgba(0,0,0,0.04);
+  --shadow-h:0 4px 12px rgba(0,0,0,0.08);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{font-family:'Pretendard',-apple-system,sans-serif;background:var(--g05);color:var(--black);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased;}
+
+/* ===== LAYOUT ===== */
+.app{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
+.topbar{height:56px;background:var(--white);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:20px;flex-shrink:0;}
+.topbar-logo{font-weight:700;font-size:15px;letter-spacing:-0.01em;}
+.topbar-logo .accent{color:var(--red);}
+.topbar-title{font-size:13px;color:var(--g5);}
+.topbar-actions{margin-left:auto;display:flex;gap:8px;}
+.btn{height:32px;padding:0 14px;border:1px solid var(--border);background:var(--white);font-size:12px;font-family:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .12s;color:var(--g7);font-weight:500;}
+.btn:hover{border-color:var(--g4);color:var(--black);}
+.btn-primary{background:var(--red);color:var(--white);border-color:var(--red);}
+.btn-primary:hover{background:var(--red-d);border-color:var(--red-d);color:var(--white);}
+.btn-sm{height:26px;padding:0 10px;font-size:11px;}
+.btn-icon{width:32px;padding:0;justify-content:center;}
+
+.main{flex:1;display:flex;overflow:hidden;}
+.content{flex:1;overflow-y:auto;padding:24px;}
+.sidebar{width:380px;background:var(--white);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;}
+
+/* ===== KPI ROW ===== */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;}
+.kpi{background:var(--white);border:1px solid var(--border);padding:16px 18px;transition:border-color .12s;}
+.kpi:hover{border-color:var(--g3);}
+.kpi-label{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--g5);margin-bottom:8px;font-weight:500;}
+.kpi-value{font-size:28px;font-weight:700;line-height:1;letter-spacing:-0.02em;}
+.kpi-value .unit{font-size:13px;color:var(--g5);font-weight:500;margin-left:4px;}
+.kpi-value.danger{color:var(--red);}
+.kpi-sub{font-size:11px;color:var(--g5);margin-top:6px;}
+.kpi-bar{height:3px;background:var(--g1);margin-top:10px;overflow:hidden;}
+.kpi-bar-fill{height:100%;background:var(--red);transition:width .3s;}
+
+/* ===== SECTION ===== */
+.section{background:var(--white);border:1px solid var(--border);margin-bottom:20px;}
+.section-head{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;}
+.section-title{font-size:13px;font-weight:600;letter-spacing:-0.01em;}
+.section-meta{font-size:11px;color:var(--g5);margin-left:auto;}
+
+/* ===== GANTT ===== */
+.gantt-wrap{overflow-x:auto;overflow-y:visible;position:relative;}
+.gantt-legend{display:flex;gap:14px;padding:10px 20px;border-bottom:1px solid var(--border-soft);flex-wrap:wrap;background:var(--g0);}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--g6);}
+.legend-swatch{width:10px;height:10px;border-radius:2px;}
+.gantt{min-width:1100px;position:relative;}
+.gantt-header{display:flex;border-bottom:1px solid var(--border);background:var(--g0);position:sticky;top:0;z-index:5;}
+.gantt-task-col{width:280px;flex-shrink:0;padding:8px 14px;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--g5);font-weight:500;border-right:1px solid var(--border);display:flex;align-items:center;}
+.gantt-dates{display:flex;flex:1;}
+.gantt-date-cell{flex:1;min-width:24px;text-align:center;padding:6px 0;font-size:10px;color:var(--g5);border-right:1px solid var(--border-soft);}
+.gantt-date-cell.weekend,.gantt-date-cell.holiday{background:var(--g1);color:var(--red);}
+.gantt-date-cell.month-start{border-left:2px solid var(--g3);font-weight:600;color:var(--black);}
+.gantt-date-cell .day{display:block;font-size:9px;color:var(--g4);margin-top:2px;}
+.gantt-date-cell.weekend .day,.gantt-date-cell.holiday .day{color:var(--red);}
+
+.gantt-row{display:flex;border-bottom:1px solid var(--border-soft);min-height:34px;position:relative;}
+.gantt-row:hover{background:var(--g05);}
+.gantt-row.phase-row{background:var(--g0);font-weight:600;}
+.gantt-row.phase-row:hover{background:var(--g1);}
+.gantt-task-info{width:280px;flex-shrink:0;padding:8px 14px;font-size:12px;display:flex;align-items:center;gap:8px;border-right:1px solid var(--border);}
+.gantt-task-info .phase-tag{font-size:9px;padding:1px 6px;border-radius:2px;color:var(--white);font-weight:500;letter-spacing:0.05em;flex-shrink:0;}
+.phase-tag.p1{background:var(--p1);} .phase-tag.p2{background:var(--p2);} .phase-tag.p3{background:var(--p3);} .phase-tag.p4{background:var(--p4);}
+.gantt-task-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;}
+.gantt-task-name:hover{color:var(--red);}
+.gantt-task-owners{display:flex;gap:2px;flex-shrink:0;}
+.owner-chip{width:18px;height:18px;border-radius:50%;background:var(--g2);color:var(--g7);font-size:9px;display:flex;align-items:center;justify-content:center;font-weight:600;cursor:default;}
+.gantt-timeline{flex:1;position:relative;display:flex;}
+.gantt-day{flex:1;min-width:24px;border-right:1px solid var(--border-soft);}
+.gantt-day.weekend,.gantt-day.holiday{background:var(--g1);}
+.gantt-day.today{background:rgba(230,2,53,0.06);position:relative;}
+.gantt-day.today::after{content:'';position:absolute;left:50%;top:0;bottom:0;width:2px;background:var(--red);}
+
+.gantt-bar{position:absolute;top:6px;bottom:6px;border-radius:3px;display:flex;align-items:center;padding:0 8px;font-size:10px;color:var(--white);font-weight:500;overflow:hidden;cursor:pointer;transition:all .12s;box-shadow:var(--shadow);white-space:nowrap;}
+.gantt-bar:hover{transform:translateY(-1px);box-shadow:var(--shadow-h);z-index:3;}
+.gantt-bar.phase-bar{top:8px;bottom:8px;opacity:0.85;}
+.gantt-bar.completed{opacity:0.5;}
+.gantt-bar.completed::before{content:'✓ ';}
+.gantt-bar.in-progress{position:relative;}
+.gantt-bar.in-progress::after{content:'';position:absolute;left:0;top:0;bottom:0;background:rgba(255,255,255,0.25);width:var(--progress,0%);}
+
+.gantt-milestone{position:absolute;top:50%;width:18px;height:18px;background:var(--black);transform:translate(-50%,-50%) rotate(45deg);box-shadow:0 0 0 2px var(--white);cursor:pointer;z-index:2;}
+.gantt-milestone.critical{background:var(--red);}
+.gantt-milestone::after{content:attr(data-label);position:absolute;top:-22px;left:50%;transform:translateX(-50%) rotate(-45deg);font-size:10px;color:var(--g7);white-space:nowrap;font-weight:500;}
+
+/* tooltip */
+.tooltip{position:fixed;background:var(--black);color:var(--white);padding:8px 12px;border-radius:4px;font-size:11px;pointer-events:none;z-index:1000;opacity:0;transition:opacity .15s;box-shadow:var(--shadow-h);max-width:240px;line-height:1.5;}
+.tooltip.show{opacity:1;}
+.tooltip b{color:var(--red-m);}
+
+/* ===== TASK LIST ===== */
+.task-table{width:100%;border-collapse:collapse;}
+.task-table thead th{text-align:left;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--g5);font-weight:500;padding:10px 14px;background:var(--g0);border-bottom:1px solid var(--border);}
+.task-table tbody td{padding:10px 14px;border-bottom:1px solid var(--border-soft);font-size:12px;vertical-align:middle;}
+.task-table tbody tr{cursor:pointer;transition:background .1s;}
+.task-table tbody tr:hover{background:var(--g0);}
+.task-table tbody tr.selected{background:var(--red-l);}
+.task-row-phase{display:inline-flex;align-items:center;gap:6px;}
+.status-pill{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:500;}
+.status-todo{background:var(--g1);color:var(--g6);}
+.status-progress{background:var(--p1-l);color:var(--p1);}
+.status-done{background:#dcfce7;color:#15803d;}
+.progress-mini{display:inline-flex;align-items:center;gap:8px;min-width:80px;}
+.progress-mini-bar{flex:1;height:4px;background:var(--g1);border-radius:2px;overflow:hidden;}
+.progress-mini-fill{height:100%;background:var(--red);transition:width .3s;}
+.progress-mini-text{font-size:10px;color:var(--g5);font-variant-numeric:tabular-nums;min-width:28px;text-align:right;}
+
+/* ===== SIDEBAR ===== */
+.tabs{display:flex;border-bottom:1px solid var(--border);}
+.tab{flex:1;padding:14px;text-align:center;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--g5);cursor:pointer;font-weight:500;border-bottom:2px solid transparent;transition:all .12s;background:none;border-top:none;border-left:none;border-right:none;font-family:inherit;}
+.tab:hover{color:var(--g7);}
+.tab.active{color:var(--red);border-bottom-color:var(--red);}
+.tab-count{margin-left:4px;font-size:10px;color:var(--g4);}
+.tab.active .tab-count{color:var(--red);}
+.tab-content{flex:1;overflow-y:auto;padding:18px;}
+
+/* TEAM TAB */
+.team-add{width:100%;padding:14px;border:1.5px dashed var(--border);background:var(--white);font-size:12px;color:var(--g5);cursor:pointer;margin-bottom:14px;font-family:inherit;transition:all .12s;display:flex;align-items:center;justify-content:center;gap:6px;}
+.team-add:hover{border-color:var(--red);color:var(--red);background:var(--red-l);}
+.member-card{background:var(--white);border:1px solid var(--border);padding:14px 16px;margin-bottom:10px;position:relative;transition:border-color .12s;}
+.member-card:hover{border-color:var(--g3);}
+.member-card.editing{border-color:var(--red);}
+.member-head{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.member-avatar{width:32px;height:32px;border-radius:50%;background:var(--red-l);color:var(--red);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12px;flex-shrink:0;}
+.member-name{flex:1;font-size:13px;font-weight:600;border:none;background:none;font-family:inherit;outline:none;padding:2px 4px;border-radius:3px;}
+.member-name:hover,.member-name:focus{background:var(--g05);}
+.member-role{font-size:11px;color:var(--g6);border:none;background:none;font-family:inherit;outline:none;width:100%;padding:4px;border-radius:3px;resize:none;}
+.member-role:hover,.member-role:focus{background:var(--g05);}
+.member-stat{display:flex;justify-content:space-between;align-items:center;font-size:10px;color:var(--g5);margin-top:8px;padding-top:8px;border-top:1px solid var(--border-soft);}
+.member-stat b{color:var(--red);font-size:13px;font-weight:700;}
+.member-remove{position:absolute;top:8px;right:8px;width:20px;height:20px;border:none;background:none;color:var(--g4);cursor:pointer;font-size:14px;opacity:0;transition:opacity .12s;}
+.member-card:hover .member-remove{opacity:1;}
+.member-remove:hover{color:var(--red);}
+
+/* TASK DETAIL TAB */
+.task-empty{padding:40px 20px;text-align:center;color:var(--g4);font-size:12px;}
+.detail-field{margin-bottom:18px;}
+.detail-label{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--g5);font-weight:500;margin-bottom:6px;}
+.detail-value{font-size:13px;color:var(--black);}
+.detail-input,.detail-textarea{width:100%;padding:8px 10px;border:1px solid var(--border);font-family:inherit;font-size:12px;color:var(--black);outline:none;transition:border-color .12s;}
+.detail-input:focus,.detail-textarea:focus{border-color:var(--red);}
+.detail-textarea{resize:vertical;min-height:60px;}
+.detail-row{display:flex;gap:10px;}
+.detail-row > *{flex:1;}
+.owner-select{display:flex;flex-wrap:wrap;gap:6px;}
+.owner-toggle{padding:5px 10px;border:1px solid var(--border);background:var(--white);font-size:11px;font-family:inherit;cursor:pointer;border-radius:14px;display:flex;align-items:center;gap:5px;transition:all .12s;}
+.owner-toggle:hover{border-color:var(--g4);}
+.owner-toggle.active{background:var(--red);color:var(--white);border-color:var(--red);}
+.status-select{display:flex;gap:6px;}
+.status-btn{flex:1;padding:7px;font-size:11px;border:1px solid var(--border);background:var(--white);cursor:pointer;font-family:inherit;font-weight:500;transition:all .12s;}
+.status-btn:hover{border-color:var(--g3);}
+.status-btn.active.todo{background:var(--g1);border-color:var(--g3);color:var(--g7);}
+.status-btn.active.progress{background:var(--p1-l);border-color:var(--p1);color:var(--p1);}
+.status-btn.active.done{background:#dcfce7;border-color:#15803d;color:#15803d;}
+.progress-input{display:flex;align-items:center;gap:10px;}
+.progress-input input[type=range]{flex:1;}
+.progress-input input[type=number]{width:60px;padding:6px 8px;border:1px solid var(--border);font-family:inherit;font-size:12px;text-align:center;}
+
+/* CHECKLIST */
+.check-section{margin-bottom:22px;}
+.check-section-title{font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--g5);font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.check-progress{font-size:11px;color:var(--red);font-variant-numeric:tabular-nums;}
+.check-item{display:flex;align-items:flex-start;gap:10px;padding:9px 0;cursor:pointer;border-bottom:1px solid var(--border-soft);}
+.check-item:last-child{border-bottom:none;}
+.check-box{width:18px;height:18px;border:1.5px solid var(--g3);border-radius:3px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;transition:all .12s;}
+.check-item.checked .check-box{background:var(--red);border-color:var(--red);}
+.check-item.checked .check-box::after{content:'✓';color:var(--white);font-size:12px;font-weight:bold;}
+.check-text{font-size:12px;color:var(--g7);line-height:1.5;}
+.check-item.checked .check-text{color:var(--g4);text-decoration:line-through;}
+.check-add{display:flex;gap:6px;margin-top:10px;}
+.check-add input{flex:1;padding:7px 10px;border:1px solid var(--border);font-family:inherit;font-size:12px;outline:none;}
+.check-add input:focus{border-color:var(--red);}
+
+/* SCROLL */
+::-webkit-scrollbar{width:8px;height:8px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--g2);border-radius:4px;}
+::-webkit-scrollbar-thumb:hover{background:var(--g3);}
+
+/* PRINT */
+@media print{
+  .topbar-actions,.sidebar{display:none;}
+  .content{overflow:visible;}
+  .gantt-wrap{overflow:visible;}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="topbar-logo"><span class="accent">AKJ</span> Schedule</div>
+  <div class="topbar-title">서울창업허브 관악 설계공모 · 2026.05.13 – 2026.08.13</div>
+  <div class="topbar-actions">
+    <button class="btn btn-sm" onclick="exportJSON()">📥 백업</button>
+    <button class="btn btn-sm" onclick="importJSON()">📤 복원</button>
+    <button class="btn btn-sm" onclick="window.print()">🖨️ 인쇄</button>
+    <button class="btn btn-sm btn-icon" onclick="resetAll()" title="초기화">↻</button>
+  </div>
+</header>
+
+<div class="main">
+
+<!-- CONTENT -->
+<div class="content">
+
+  <!-- KPI ROW -->
+  <div class="kpi-row">
+    <div class="kpi">
+      <div class="kpi-label">D-day · 최종 접수</div>
+      <div class="kpi-value danger"><span id="kpi-dday">--</span><span class="unit">일</span></div>
+      <div class="kpi-sub">2026.07.21 (화) 17:00 마감</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">전체 진행률</div>
+      <div class="kpi-value"><span id="kpi-progress">0</span><span class="unit">%</span></div>
+      <div class="kpi-bar"><div class="kpi-bar-fill" id="kpi-progress-bar" style="width:0%"></div></div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">완료 · 진행 · 대기</div>
+      <div class="kpi-value"><span id="kpi-done">0</span><span class="unit">/ <span id="kpi-total">0</span></span></div>
+      <div class="kpi-sub"><span id="kpi-inprogress">0</span> 진행 중 · <span id="kpi-todo">0</span> 대기</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">미배정 작업</div>
+      <div class="kpi-value"><span id="kpi-unassigned">0</span><span class="unit">건</span></div>
+      <div class="kpi-sub">담당자 지정 필요</div>
+    </div>
+  </div>
+
+  <!-- GANTT -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title">간트차트</div>
+      <div class="section-meta">하루 단위 · 주말/공휴일 음영</div>
+    </div>
+    <div class="gantt-legend">
+      <div class="legend-item"><div class="legend-swatch" style="background:var(--p1)"></div>1단계 전략·리서치</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:var(--p2)"></div>2단계 디자인 발전</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:var(--p3)"></div>3단계 성과물 제작</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:var(--p4)"></div>4단계 최종 마감</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:var(--black);transform:rotate(45deg);width:8px;height:8px"></div>마일스톤</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:var(--red)"></div>오늘</div>
+    </div>
+    <div class="gantt-wrap" id="gantt-wrap"></div>
+  </div>
+
+  <!-- TASK LIST -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title">작업 목록</div>
+      <div class="section-meta">행을 클릭하면 우측에서 편집</div>
+    </div>
+    <table class="task-table">
+      <thead>
+        <tr>
+          <th style="width:80px">단계</th>
+          <th>작업명</th>
+          <th style="width:130px">기간</th>
+          <th style="width:120px">담당</th>
+          <th style="width:120px">상태</th>
+          <th style="width:120px">진행률</th>
+        </tr>
+      </thead>
+      <tbody id="task-tbody"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="tabs">
+    <button class="tab active" data-tab="team" onclick="switchTab('team')">팀<span class="tab-count" id="tab-count-team">0</span></button>
+    <button class="tab" data-tab="task" onclick="switchTab('task')">작업</button>
+    <button class="tab" data-tab="check" onclick="switchTab('check')">체크리스트<span class="tab-count" id="tab-count-check">0</span></button>
+  </div>
+
+  <!-- TEAM TAB -->
+  <div class="tab-content" id="tab-team">
+    <button class="team-add" onclick="addMember()">+ 팀원 추가</button>
+    <div id="members-list"></div>
+  </div>
+
+  <!-- TASK DETAIL TAB -->
+  <div class="tab-content" id="tab-task" style="display:none;">
+    <div id="task-detail"></div>
+  </div>
+
+  <!-- CHECKLIST TAB -->
+  <div class="tab-content" id="tab-check" style="display:none;">
+    <div id="checklist-container"></div>
+  </div>
+</aside>
+
+</div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+/* ============================================================
+   AKJ Schedule Dashboard
+   ============================================================ */
+
+// ============ DATA MODEL ============
+const STORAGE_KEY = 'akj-schedule-v1';
+const PROJECT_START = '2026-05-13';
+const PROJECT_END   = '2026-08-21'; // 결과발표 + 약간
+const SUBMIT_DATE   = '2026-07-21';
+
+const HOLIDAYS_2026 = {
+  '2026-05-25': '부처님오신날 대체',
+  '2026-06-03': '지방선거일',
+  '2026-06-06': '현충일',
+  '2026-08-15': '광복절',
+};
+
+// 기본 작업 데이터 — 사용자가 수정/추가/삭제 가능
+const DEFAULT_TASKS = [
+  // 단계 1 — 전략·리서치
+  {id:'t1', phase:1, name:'지침서 및 법규 분석', start:'2026-05-13', end:'2026-05-20', owners:[], status:'todo', progress:0, memo:'연면적·건폐율·용적률·주차대수 핵심 지표 추출'},
+  {id:'t2', phase:1, name:'심사위원 리서치', start:'2026-05-13', end:'2026-05-22', owners:[], status:'todo', progress:0, memo:'위원별 성향·과거 심사평·대표작 분석'},
+  {id:'t3', phase:1, name:'사례 조사', start:'2026-05-13', end:'2026-05-29', owners:[], status:'todo', progress:0, memo:'유사 프로그램/규모 국내외 사례 분석'},
+  {id:'t4', phase:1, name:'현장 답사 · 현장설명회', start:'2026-05-18', end:'2026-05-18', owners:[], status:'todo', progress:0, memo:'14:00 서울창업허브 공덕'},
+  {id:'t5', phase:1, name:'질의서 작성·접수', start:'2026-05-19', end:'2026-05-20', owners:[], status:'todo', progress:0, memo:'17:00 마감, 홈페이지만 가능'},
+  // 단계 2 — 디자인 발전
+  {id:'t6', phase:2, name:'[Iter 1] 매스 스터디 · 배치', start:'2026-05-26', end:'2026-05-29', owners:[], status:'todo', progress:0, memo:'매스 대안 3개안 이상, 사이트 배치, 진입 시퀀스'},
+  {id:'t7', phase:2, name:'질의응답 반영', start:'2026-05-29', end:'2026-06-01', owners:[], status:'todo', progress:0, memo:'14:00 게재된 답변 검토 및 설계 반영'},
+  {id:'t8', phase:2, name:'[Iter 2] 평면·단면 구체화', start:'2026-06-01', end:'2026-06-05', owners:[], status:'todo', progress:0, memo:'코어·수직동선·실별 면적표 검토'},
+  {id:'t9', phase:2, name:'[Iter 3] 입면·구조·설비', start:'2026-06-08', end:'2026-06-12', owners:[], status:'todo', progress:0, memo:'최종 매스·입면·구조 시스템·외부 공간 통합'},
+  {id:'t10', phase:2, name:'중간 사내 리뷰', start:'2026-06-15', end:'2026-06-19', owners:[], status:'todo', progress:0, memo:'전체 디자인 발전 안 최종 검증'},
+  // 단계 3 — 성과물 제작
+  {id:'t11', phase:3, name:'CG · 투시도 모델링', start:'2026-06-15', end:'2026-07-05', owners:[], status:'todo', progress:0, memo:'대표 이미지·조감도·내부 투시도 뷰 선정 및 렌더'},
+  {id:'t12', phase:3, name:'도면 작업', start:'2026-06-15', end:'2026-07-08', owners:[], status:'todo', progress:0, memo:'배치도·평면도·단면도·입면도 컬러링 + 다이어그램화'},
+  {id:'t13', phase:3, name:'설계설명서·서식 작성', start:'2026-06-22', end:'2026-07-08', owners:[], status:'todo', progress:0, memo:'서식 1~15 + 컨셉 텍스트 + 친환경 계획'},
+  {id:'t14', phase:3, name:'법규·기술 사전 검토', start:'2026-06-29', end:'2026-07-08', owners:[], status:'todo', progress:0, memo:'장애인 편의·피난·방화·주차 위반 사항 점검'},
+  {id:'t15', phase:3, name:'패널 레이아웃·구성', start:'2026-07-01', end:'2026-07-10', owners:[], status:'todo', progress:0, memo:'14,400×8,100px / 30MB 이하 / 2매'},
+  {id:'t16', phase:3, name:'사내 1차 마감', start:'2026-07-10', end:'2026-07-10', owners:[], status:'todo', progress:0, memo:'전 성과물 가본 완성'},
+  // 단계 4 — 최종 마감
+  {id:'t17', phase:4, name:'사내 리뷰 반영 · 수정', start:'2026-07-13', end:'2026-07-17', owners:[], status:'todo', progress:0, memo:'지적 보완사항 집중 수정'},
+  {id:'t18', phase:4, name:'디테일 마감', start:'2026-07-15', end:'2026-07-19', owners:[], status:'todo', progress:0, memo:'투시도 리터칭·도면 선 굵기·폰트 가독성'},
+  {id:'t19', phase:4, name:'제출물 규격·익명성 점검', start:'2026-07-18', end:'2026-07-20', owners:[], status:'todo', progress:0, memo:'PIN번호 · 파일명 · 용량 · 해상도 · 업체 식별 표기'},
+  {id:'t20', phase:4, name:'온라인 제출', start:'2026-07-20', end:'2026-07-21', owners:[], status:'todo', progress:0, memo:'7/21 17:00 전 업로드 완료. 7/20 권장'},
+];
+
+// 마일스톤
+const MILESTONES = [
+  {date:'2026-05-08', label:'시행공고', critical:false},
+  {date:'2026-05-18', label:'현장설명회', critical:false},
+  {date:'2026-05-20', label:'질의 마감', critical:false},
+  {date:'2026-05-29', label:'질의응답', critical:false},
+  {date:'2026-07-10', label:'사내 마감', critical:true},
+  {date:'2026-07-21', label:'최종 접수', critical:true},
+  {date:'2026-07-31', label:'1차 심사', critical:false},
+  {date:'2026-08-10', label:'2차 심사', critical:false},
+  {date:'2026-08-13', label:'발표', critical:true},
+];
+
+// 단계 정보
+const PHASES = {
+  1: {name:'전략·리서치', short:'P1', color:'var(--p1)', start:'2026-05-13', end:'2026-05-29'},
+  2: {name:'디자인 발전', short:'P2', color:'var(--p2)', start:'2026-05-26', end:'2026-06-19'},
+  3: {name:'성과물 제작', short:'P3', color:'var(--p3)', start:'2026-06-15', end:'2026-07-10'},
+  4: {name:'최종 마감',   short:'P4', color:'var(--p4)', start:'2026-07-13', end:'2026-07-21'},
+};
+
+const DEFAULT_MEMBERS = [];
+
+const DEFAULT_CHECKLIST = {
+  '필수 제출물': [
+    {id:'c1', text:'설계 도판 panel_01, panel_02 (14,400×8,100px, 각 30MB 이하)', done:false},
+    {id:'c2', text:'대표 이미지 main.jpg (3,840×2,250px, 5MB 이하)', done:false},
+    {id:'c3', text:'배치도·평면도·입면도·단면도 PDF (각 5MB 이하, 300dpi)', done:false},
+    {id:'c4', text:'설계개념도 diagram_01 등 (각 5MB 이하)', done:false},
+    {id:'c5', text:'제출서류 ZIP (서식1~15 + 자격증 사본, 10MB 이하)', done:false},
+  ],
+  '서식 점검': [
+    {id:'c6', text:'[서식1] 설계공모 참가신청서', done:false},
+    {id:'c7', text:'[서식2~3] 대표자 선임계 · 공동응모협정서 (해당시)', done:false},
+    {id:'c8', text:'[서식4~7] 보안각서·서약서·동의서', done:false},
+    {id:'c9', text:'[서식8] 건축개요', done:false},
+    {id:'c10', text:'[서식9] 설계설명서', done:false},
+    {id:'c11', text:'[서식10~11] 층별 세부용도 및 면적표 · 면적산출근거표', done:false},
+    {id:'c12', text:'[서식12] 관련법규 검토서', done:false},
+    {id:'c13', text:'[서식13] 예정 공사비 검토 의견서', done:false},
+  ],
+  '법규·지침 위반 점검': [
+    {id:'c14', text:'연면적 15,415㎡ ±5%~+3% 범위 준수', done:false},
+    {id:'c15', text:'건폐율 50% 이하 · 용적률 250% 이하', done:false},
+    {id:'c16', text:'주차 165대 이상 (주민개방 100면 포함)', done:false},
+    {id:'c17', text:'건축선 3m 후퇴 준수', done:false},
+    {id:'c18', text:'철도 환기구 굴착금지구간 (외측 6m 내) 점검', done:false},
+    {id:'c19', text:'장애인 편의시설 · 피난 · 방화 법규 점검', done:false},
+    {id:'c20', text:'녹색건축법 · 일사조절장치 반영', done:false},
+  ],
+  '실격 리스크': [
+    {id:'c21', text:'⚠️ 업체 식별 표기·암호·기호 일체 없음', done:false},
+    {id:'c22', text:'⚠️ 모든 파일에 PIN 번호 정확히 표기', done:false},
+    {id:'c23', text:'⚠️ 참조 이미지·사례 사진 미사용 (직접 생산 자료만)', done:false},
+    {id:'c24', text:'⚠️ SNS 등에 작품 사전 공개 금지', done:false},
+    {id:'c25', text:'⚠️ 7/21 17:00 이전 업로드 완료', done:false},
+  ],
+};
+
+// ============ STATE ============
+let state = loadState();
+
+function loadState() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // 마이그레이션: 필드 누락 대비
+      parsed.tasks = parsed.tasks || JSON.parse(JSON.stringify(DEFAULT_TASKS));
+      parsed.members = parsed.members || [];
+      parsed.checklist = parsed.checklist || JSON.parse(JSON.stringify(DEFAULT_CHECKLIST));
+      parsed.selectedTaskId = parsed.selectedTaskId || null;
+      parsed.activeTab = parsed.activeTab || 'team';
+      return parsed;
+    }
+  } catch(e) { console.error('load failed', e); }
+  return {
+    tasks: JSON.parse(JSON.stringify(DEFAULT_TASKS)),
+    members: JSON.parse(JSON.stringify(DEFAULT_MEMBERS)),
+    checklist: JSON.parse(JSON.stringify(DEFAULT_CHECKLIST)),
+    selectedTaskId: null,
+    activeTab: 'team',
+  };
+}
+
+function saveState() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+  catch(e) { console.error('save failed', e); }
+}
+
+// ============ UTIL ============
+function parseDate(s) { return new Date(s + 'T00:00:00'); }
+function dateToStr(d) {
+  const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), dd = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${dd}`;
+}
+function daysBetween(a, b) { return Math.round((parseDate(b) - parseDate(a)) / 86400000); }
+function addDays(s, n) {
+  const d = parseDate(s); d.setDate(d.getDate()+n);
+  return dateToStr(d);
+}
+function isWeekend(s) { const d = parseDate(s).getDay(); return d===0 || d===6; }
+function isHoliday(s) { return !!HOLIDAYS_2026[s]; }
+function dayName(s) { return ['일','월','화','수','목','금','토'][parseDate(s).getDay()]; }
+function todayStr() { return dateToStr(new Date()); }
+
+// ============ KPI ============
+function renderKPI() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const sub = new Date(SUBMIT_DATE+'T17:00:00');
+  const dday = Math.ceil((sub - new Date()) / 86400000);
+  document.getElementById('kpi-dday').textContent = dday >= 0 ? dday : 'D+' + Math.abs(dday);
+
+  const total = state.tasks.length;
+  const done = state.tasks.filter(t => t.status==='done').length;
+  const progress = state.tasks.filter(t => t.status==='progress').length;
+  const todo = state.tasks.filter(t => t.status==='todo').length;
+  const unassigned = state.tasks.filter(t => !t.owners || t.owners.length===0).length;
+
+  const totalProgress = total ? Math.round(state.tasks.reduce((s,t) => {
+    if (t.status==='done') return s + 100;
+    if (t.status==='progress') return s + (t.progress||50);
+    return s;
+  }, 0) / total) : 0;
+
+  document.getElementById('kpi-progress').textContent = totalProgress;
+  document.getElementById('kpi-progress-bar').style.width = totalProgress + '%';
+  document.getElementById('kpi-done').textContent = done;
+  document.getElementById('kpi-total').textContent = total;
+  document.getElementById('kpi-inprogress').textContent = progress;
+  document.getElementById('kpi-todo').textContent = todo;
+  document.getElementById('kpi-unassigned').textContent = unassigned;
+}
+
+// ============ GANTT ============
+function renderGantt() {
+  const wrap = document.getElementById('gantt-wrap');
+  const days = daysBetween(PROJECT_START, PROJECT_END) + 1;
+  const today = todayStr();
+
+  // Build header
+  let dateCells = '';
+  for (let i = 0; i < days; i++) {
+    const d = addDays(PROJECT_START, i);
+    const dt = parseDate(d);
+    const classes = [];
+    if (isWeekend(d)) classes.push('weekend');
+    if (isHoliday(d)) classes.push('holiday');
+    if (dt.getDate() === 1) classes.push('month-start');
+    const display = dt.getDate() === 1 || i === 0
+      ? `${dt.getMonth()+1}/${dt.getDate()}`
+      : `${dt.getDate()}`;
+    dateCells += `<div class="gantt-date-cell ${classes.join(' ')}">${display}<span class="day">${dayName(d)}</span></div>`;
+  }
+
+  // Build phase rows
+  let phaseRows = '';
+  Object.entries(PHASES).forEach(([num, phase]) => {
+    const startOffset = daysBetween(PROJECT_START, phase.start);
+    const duration = daysBetween(phase.start, phase.end) + 1;
+    const leftPct = (startOffset / days) * 100;
+    const widthPct = (duration / days) * 100;
+    phaseRows += `
+      <div class="gantt-row phase-row" data-phase="${num}">
+        <div class="gantt-task-info">
+          <span class="phase-tag p${num}">P${num}</span>
+          <span class="gantt-task-name" style="font-weight:600">${phase.name}</span>
+        </div>
+        <div class="gantt-timeline">
+          ${buildDayCells(days, today)}
+          <div class="gantt-bar phase-bar" style="left:${leftPct}%;width:${widthPct}%;background:${phase.color}">
+            ${phase.name}
+          </div>
+        </div>
+      </div>`;
+  });
+
+  // Build task rows
+  let taskRows = '';
+  state.tasks.forEach(task => {
+    const startOffset = daysBetween(PROJECT_START, task.start);
+    const duration = daysBetween(task.start, task.end) + 1;
+    const leftPct = (startOffset / days) * 100;
+    const widthPct = (duration / days) * 100;
+    const phaseColor = `var(--p${task.phase})`;
+    const ownersHtml = (task.owners||[]).slice(0,3).map(oid => {
+      const m = state.members.find(x => x.id===oid);
+      if (!m) return '';
+      return `<div class="owner-chip" title="${escapeHtml(m.name)}">${initials(m.name)}</div>`;
+    }).join('');
+    const moreOwners = (task.owners||[]).length > 3 ? `<div class="owner-chip">+${task.owners.length-3}</div>` : '';
+    const statusClass = task.status==='done' ? 'completed' : (task.status==='progress' ? 'in-progress' : '');
+    const barLabel = task.name.length > 20 ? task.name.substring(0,18)+'…' : task.name;
+
+    taskRows += `
+      <div class="gantt-row" data-task-id="${task.id}">
+        <div class="gantt-task-info">
+          <span class="phase-tag p${task.phase}">P${task.phase}</span>
+          <span class="gantt-task-name" onclick="selectTask('${task.id}')">${escapeHtml(task.name)}</span>
+          <div class="gantt-task-owners">${ownersHtml}${moreOwners}</div>
+        </div>
+        <div class="gantt-timeline">
+          ${buildDayCells(days, today)}
+          <div class="gantt-bar ${statusClass}" 
+               style="left:${leftPct}%;width:${widthPct}%;background:${phaseColor};--progress:${task.progress||0}%"
+               onclick="selectTask('${task.id}')"
+               onmouseenter="showTooltip(event, '${task.id}')"
+               onmouseleave="hideTooltip()">
+            ${escapeHtml(barLabel)}
+          </div>
+        </div>
+      </div>`;
+  });
+
+  // Milestones row
+  let milestonesHtml = '';
+  MILESTONES.forEach(m => {
+    const offset = daysBetween(PROJECT_START, m.date);
+    const leftPct = (offset / days) * 100 + (50 / days);
+    milestonesHtml += `<div class="gantt-milestone ${m.critical?'critical':''}" 
+      style="left:${leftPct}%" 
+      data-label="${m.label} · ${m.date.substring(5)}"
+      onmouseenter="showMilestoneTooltip(event, '${escapeHtml(m.label)}', '${m.date}')"
+      onmouseleave="hideTooltip()"></div>`;
+  });
+  const milestonesRow = `
+    <div class="gantt-row" style="min-height:42px;background:var(--g0);border-bottom:1px solid var(--border)">
+      <div class="gantt-task-info"><span style="font-size:11px;color:var(--g6);font-weight:600">📍 마일스톤</span></div>
+      <div class="gantt-timeline" style="position:relative">
+        ${buildDayCells(days, today)}
+        ${milestonesHtml}
+      </div>
+    </div>`;
+
+  wrap.innerHTML = `
+    <div class="gantt">
+      <div class="gantt-header">
+        <div class="gantt-task-col">작업 / 단계</div>
+        <div class="gantt-dates">${dateCells}</div>
+      </div>
+      ${milestonesRow}
+      ${phaseRows}
+      ${taskRows}
+    </div>`;
+}
+
+function buildDayCells(days, today) {
+  let html = '';
+  for (let i = 0; i < days; i++) {
+    const d = addDays(PROJECT_START, i);
+    const classes = [];
+    if (isWeekend(d)) classes.push('weekend');
+    if (isHoliday(d)) classes.push('holiday');
+    if (d === today) classes.push('today');
+    html += `<div class="gantt-day ${classes.join(' ')}"></div>`;
+  }
+  return html;
+}
+
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function initials(name) {
+  if (!name) return '?';
+  const trimmed = name.trim();
+  if (/[가-힣]/.test(trimmed)) {
+    // Korean: 첫 글자
+    return trimmed.charAt(0);
+  }
+  const parts = trimmed.split(/\s+/);
+  return parts.length >= 2
+    ? (parts[0][0] + parts[parts.length-1][0]).toUpperCase()
+    : trimmed.substring(0, 2).toUpperCase();
+}
+
+// ============ TOOLTIP ============
+function showTooltip(e, taskId) {
+  const t = state.tasks.find(x => x.id===taskId);
+  if (!t) return;
+  const tip = document.getElementById('tooltip');
+  const owners = (t.owners||[]).map(oid => {
+    const m = state.members.find(x => x.id===oid); return m ? m.name : null;
+  }).filter(Boolean).join(', ') || '<i style="color:#aaa">미배정</i>';
+  const statusText = {todo:'대기', progress:'진행 중', done:'완료'}[t.status];
+  tip.innerHTML = `<b>${escapeHtml(t.name)}</b><br>
+    ${t.start} → ${t.end}<br>
+    상태: ${statusText} · 진행률 ${t.progress||0}%<br>
+    담당: ${owners}<br>
+    ${t.memo ? '<i style="color:#bbb">'+escapeHtml(t.memo)+'</i>' : ''}`;
+  positionTooltip(e);
+  tip.classList.add('show');
+}
+function showMilestoneTooltip(e, label, date) {
+  const tip = document.getElementById('tooltip');
+  tip.innerHTML = `<b>${label}</b><br>${date}`;
+  positionTooltip(e);
+  tip.classList.add('show');
+}
+function positionTooltip(e) {
+  const tip = document.getElementById('tooltip');
+  tip.style.left = (e.clientX + 12) + 'px';
+  tip.style.top = (e.clientY + 12) + 'px';
+}
+function hideTooltip() { document.getElementById('tooltip').classList.remove('show'); }
+document.addEventListener('mousemove', e => {
+  const tip = document.getElementById('tooltip');
+  if (tip.classList.contains('show')) positionTooltip(e);
+});
+
+// ============ TASK LIST ============
+function renderTaskList() {
+  const tbody = document.getElementById('task-tbody');
+  tbody.innerHTML = state.tasks.map(t => {
+    const ownersHtml = (t.owners||[]).slice(0,3).map(oid => {
+      const m = state.members.find(x => x.id===oid);
+      return m ? `<div class="owner-chip" title="${escapeHtml(m.name)}">${initials(m.name)}</div>` : '';
+    }).join('');
+    const moreOwners = (t.owners||[]).length > 3 ? `<div class="owner-chip">+${t.owners.length-3}</div>` : '';
+    const statusInfo = {
+      todo: ['status-todo', '대기'],
+      progress: ['status-progress', '진행'],
+      done: ['status-done', '완료']
+    }[t.status];
+    const prog = t.status==='done' ? 100 : (t.progress||0);
+    const selected = state.selectedTaskId === t.id ? 'selected' : '';
+    return `<tr class="${selected}" onclick="selectTask('${t.id}')">
+      <td><span class="phase-tag p${t.phase}">P${t.phase}</span></td>
+      <td style="font-weight:500">${escapeHtml(t.name)}</td>
+      <td style="color:var(--g6);font-size:11px">${t.start.substring(5)} ~ ${t.end.substring(5)}</td>
+      <td><div style="display:flex;gap:2px">${ownersHtml||'<span style="color:var(--g4);font-size:11px">—</span>'}${moreOwners}</div></td>
+      <td><span class="status-pill ${statusInfo[0]}">${statusInfo[1]}</span></td>
+      <td>
+        <div class="progress-mini">
+          <div class="progress-mini-bar"><div class="progress-mini-fill" style="width:${prog}%"></div></div>
+          <div class="progress-mini-text">${prog}%</div>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ============ TABS ============
+function switchTab(tab) {
+  state.activeTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab===tab));
+  document.getElementById('tab-team').style.display = tab==='team' ? 'block' : 'none';
+  document.getElementById('tab-task').style.display = tab==='task' ? 'block' : 'none';
+  document.getElementById('tab-check').style.display = tab==='check' ? 'block' : 'none';
+  saveState();
+}
+
+// ============ TEAM ============
+function renderMembers() {
+  const list = document.getElementById('members-list');
+  document.getElementById('tab-count-team').textContent = state.members.length;
+
+  if (state.members.length === 0) {
+    list.innerHTML = `<div style="text-align:center;padding:30px 20px;color:var(--g4);font-size:12px;line-height:1.7">
+      아직 팀원이 없어요.<br>위 <b style="color:var(--red)">+ 팀원 추가</b> 버튼으로<br>팀원을 등록하세요.
+    </div>`;
+    return;
+  }
+
+  list.innerHTML = state.members.map(m => {
+    const taskCount = state.tasks.filter(t => (t.owners||[]).includes(m.id)).length;
+    return `<div class="member-card" data-member-id="${m.id}">
+      <button class="member-remove" onclick="removeMember('${m.id}')" title="삭제">×</button>
+      <div class="member-head">
+        <div class="member-avatar">${initials(m.name)}</div>
+        <input class="member-name" value="${escapeHtml(m.name)}" 
+               placeholder="이름" 
+               onchange="updateMember('${m.id}', 'name', this.value)">
+      </div>
+      <textarea class="member-role" rows="2" 
+                placeholder="역할 · 담당 분야 (예: 매스/입면 · 패널 디자인 · 도면 컬러링)" 
+                onchange="updateMember('${m.id}', 'role', this.value)">${escapeHtml(m.role||'')}</textarea>
+      <div class="member-stat">
+        <span>배정된 작업</span>
+        <span><b>${taskCount}</b>건</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function addMember() {
+  const id = 'm' + Date.now();
+  state.members.push({id, name:'신규 팀원', role:''});
+  saveState();
+  renderMembers();
+  renderTaskDetail();
+  renderKPI();
+  // 새 카드의 이름 인풋에 포커스
+  setTimeout(() => {
+    const newCard = document.querySelector(`[data-member-id="${id}"] .member-name`);
+    if (newCard) { newCard.focus(); newCard.select(); }
+  }, 50);
+}
+
+function updateMember(id, field, value) {
+  const m = state.members.find(x => x.id===id);
+  if (m) {
+    m[field] = value;
+    saveState();
+    // 이름 변경 시 간트/리스트도 갱신
+    if (field === 'name') { renderGantt(); renderTaskList(); renderMembers(); renderTaskDetail(); }
+  }
+}
+
+function removeMember(id) {
+  const m = state.members.find(x => x.id===id);
+  if (!m) return;
+  if (!confirm(`'${m.name}' 팀원을 삭제할까요?\n배정된 작업에서도 제외됩니다.`)) return;
+  state.members = state.members.filter(x => x.id !== id);
+  state.tasks.forEach(t => { t.owners = (t.owners||[]).filter(oid => oid !== id); });
+  saveState();
+  renderAll();
+}
+
+// ============ TASK DETAIL ============
+function selectTask(id) {
+  state.selectedTaskId = id;
+  state.activeTab = 'task';
+  saveState();
+  switchTab('task');
+  renderTaskList();
+  renderTaskDetail();
+}
+
+function renderTaskDetail() {
+  const container = document.getElementById('task-detail');
+  const t = state.tasks.find(x => x.id === state.selectedTaskId);
+
+  if (!t) {
+    container.innerHTML = `<div class="task-empty">
+      ← 왼쪽 작업 목록이나 간트 막대를 클릭하면<br>여기에 상세 정보가 표시돼요.
+    </div>`;
+    return;
+  }
+
+  const phaseInfo = PHASES[t.phase];
+  container.innerHTML = `
+    <div class="detail-field">
+      <div class="detail-label">단계</div>
+      <div class="detail-value">
+        <span class="phase-tag p${t.phase}">P${t.phase}</span>
+        <span style="margin-left:6px">${phaseInfo.name}</span>
+      </div>
+    </div>
+
+    <div class="detail-field">
+      <div class="detail-label">작업명</div>
+      <input class="detail-input" value="${escapeHtml(t.name)}" 
+             onchange="updateTask('${t.id}', 'name', this.value)">
+    </div>
+
+    <div class="detail-field">
+      <div class="detail-label">기간</div>
+      <div class="detail-row">
+        <input class="detail-input" type="date" value="${t.start}" 
+               onchange="updateTask('${t.id}', 'start', this.value)">
+        <input class="detail-input" type="date" value="${t.end}" 
+               onchange="updateTask('${t.id}', 'end', this.value)">
+      </div>
+    </div>
+
+    <div class="detail-field">
+      <div class="detail-label">담당자 (복수 선택)</div>
+      <div class="owner-select">
+        ${state.members.length === 0 
+          ? '<span style="font-size:11px;color:var(--g4)">팀 탭에서 팀원을 먼저 추가하세요</span>'
+          : state.members.map(m => {
+            const on = (t.owners||[]).includes(m.id);
+            return `<button class="owner-toggle ${on?'active':''}" 
+                          onclick="toggleOwner('${t.id}', '${m.id}')">
+              <span style="width:14px;height:14px;border-radius:50%;background:${on?'rgba(255,255,255,0.25)':'var(--red-l)'};color:${on?'#fff':'var(--red)'};display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:600">${initials(m.name)}</span>
+              ${escapeHtml(m.name)}
+            </button>`;
+          }).join('')}
+      </div>
+    </div>
+
+    <div class="detail-field">
+      <div class="detail-label">상태</div>
+      <div class="status-select">
+        <button class="status-btn todo ${t.status==='todo'?'active':''}" onclick="updateTask('${t.id}', 'status', 'todo')">대기</button>
+        <button class="status-btn progress ${t.status==='progress'?'active':''}" onclick="updateTask('${t.id}', 'status', 'progress')">진행 중</button>
+        <button class="status-btn done ${t.status==='done'?'active':''}" onclick="updateTask('${t.id}', 'status', 'done')">완료</button>
+      </div>
+    </div>
+
+    <div class="detail-field">
+      <div class="detail-label">진행률 ${t.progress||0}%</div>
+      <div class="progress-input">
+        <input type="range" min="0" max="100" step="5" value="${t.progress||0}" 
+               oninput="updateTask('${t.id}', 'progress', parseInt(this.value))">
+        <input type="number" min="0" max="100" value="${t.progress||0}" 
+               onchange="updateTask('${t.id}', 'progress', parseInt(this.value)||0)">
+      </div>
+    </div>
+
+    <div class="detail-field">
+      <div class="detail-label">메모</div>
+      <textarea class="detail-textarea" placeholder="메모·세부 지침·체크사항 등"
+                onchange="updateTask('${t.id}', 'memo', this.value)">${escapeHtml(t.memo||'')}</textarea>
+    </div>
+  `;
+}
+
+function updateTask(id, field, value) {
+  const t = state.tasks.find(x => x.id===id);
+  if (!t) return;
+  t[field] = value;
+  // status 변경 시 progress 자동 처리
+  if (field === 'status') {
+    if (value === 'done') t.progress = 100;
+    else if (value === 'todo') t.progress = 0;
+    else if (value === 'progress' && (!t.progress || t.progress === 0 || t.progress === 100)) t.progress = 50;
+  }
+  if (field === 'progress') {
+    if (value >= 100) t.status = 'done';
+    else if (value > 0 && t.status === 'todo') t.status = 'progress';
+    else if (value === 0 && t.status === 'progress') t.status = 'todo';
+  }
+  saveState();
+  renderAll();
+}
+
+function toggleOwner(taskId, memberId) {
+  const t = state.tasks.find(x => x.id===taskId);
+  if (!t) return;
+  t.owners = t.owners || [];
+  const idx = t.owners.indexOf(memberId);
+  if (idx >= 0) t.owners.splice(idx, 1);
+  else t.owners.push(memberId);
+  saveState();
+  renderAll();
+}
+
+// ============ CHECKLIST ============
+function renderChecklist() {
+  const container = document.getElementById('checklist-container');
+  let totalDone = 0, total = 0;
+  Object.values(state.checklist).forEach(items => {
+    total += items.length;
+    totalDone += items.filter(i => i.done).length;
+  });
+  document.getElementById('tab-count-check').textContent = `${totalDone}/${total}`;
+
+  container.innerHTML = Object.entries(state.checklist).map(([section, items]) => {
+    const sectionDone = items.filter(i => i.done).length;
+    return `<div class="check-section">
+      <div class="check-section-title">
+        <span>${section}</span>
+        <span class="check-progress">${sectionDone}/${items.length}</span>
+      </div>
+      ${items.map(item => `
+        <div class="check-item ${item.done?'checked':''}" onclick="toggleCheck('${section}', '${item.id}')">
+          <div class="check-box"></div>
+          <div class="check-text">${escapeHtml(item.text)}</div>
+        </div>
+      `).join('')}
+      <div class="check-add">
+        <input placeholder="새 항목 추가..." 
+               onkeypress="if(event.key==='Enter'){addCheckItem('${section}', this.value); this.value='';}">
+        <button class="btn btn-sm" onclick="const i=this.previousElementSibling;addCheckItem('${section}', i.value);i.value='';">추가</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleCheck(section, id) {
+  const item = state.checklist[section].find(i => i.id===id);
+  if (item) { item.done = !item.done; saveState(); renderChecklist(); }
+}
+
+function addCheckItem(section, text) {
+  if (!text || !text.trim()) return;
+  state.checklist[section].push({id: 'c'+Date.now(), text: text.trim(), done: false});
+  saveState();
+  renderChecklist();
+}
+
+// ============ IMPORT/EXPORT ============
+function exportJSON() {
+  const data = JSON.stringify(state, null, 2);
+  const blob = new Blob([data], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `akj-schedule-${todayStr()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importJSON() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (!confirm('현재 데이터를 덮어쓰고 복원할까요?')) return;
+        state = data;
+        saveState();
+        renderAll();
+        alert('복원 완료');
+      } catch(err) { alert('파일을 읽을 수 없어요: ' + err.message); }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+function resetAll() {
+  if (!confirm('모든 데이터를 초기 상태로 되돌립니다.\n팀원·작업·체크리스트가 모두 초기화돼요. 진행할까요?')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  state = loadState();
+  renderAll();
+}
+
+// ============ MAIN ============
+function renderAll() {
+  renderKPI();
+  renderGantt();
+  renderTaskList();
+  renderMembers();
+  renderTaskDetail();
+  renderChecklist();
+  switchTab(state.activeTab);
+}
+
+renderAll();
+</script>
+</body>
+</html>
