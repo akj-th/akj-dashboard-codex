@@ -97,7 +97,7 @@ html,body{font-family:'Pretendard',-apple-system,sans-serif;background:var(--g05
 .gantt-bar.in-progress{}
 .gantt-bar.in-progress::after{content:'';position:absolute;left:0;top:0;bottom:0;background:rgba(255,255,255,0.25);width:var(--progress,0%);}
 
-.gantt-milestone{position:absolute;top:50%;width:18px;height:18px;background:var(--black);transform:translate(-50%,-50%) rotate(45deg);box-shadow:0 0 0 2px var(--white);cursor:pointer;z-index:2;}
+.gantt-milestone{position:absolute;top:50%;width:9px;height:9px;background:var(--black);transform:translate(-50%,-50%) rotate(45deg);box-shadow:0 0 0 1px var(--white);cursor:pointer;z-index:2;}
 .gantt-milestone.critical{background:var(--red);}
 .gantt-milestone::after{content:attr(data-label);position:absolute;top:-22px;left:50%;transform:translateX(-50%) rotate(-45deg);font-size:10px;color:var(--g7);white-space:nowrap;font-weight:500;}
 
@@ -584,7 +584,7 @@ function renderGantt() {
     const leftPct = (offset / days) * 100 + (50 / days);
     milestonesHtml += `<div class="gantt-milestone ${m.critical?'critical':''}" 
       style="left:${leftPct}%" 
-      data-label="${m.label} · ${m.date.substring(5)}"
+      data-label="${escapeHtml(m.label)}"
       onmouseenter="showMilestoneTooltip(event, '${escapeHtml(m.label)}', '${m.date}')"
       onmouseleave="hideTooltip()"></div>`;
   });
