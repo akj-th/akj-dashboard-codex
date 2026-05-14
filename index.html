@@ -678,11 +678,11 @@ document.addEventListener('mousemove', e => {
 function renderTaskList() {
   const tbody = document.getElementById('task-tbody');
   tbody.innerHTML = state.tasks.map(t => {
-    const ownersHtml = (t.owners||[]).slice(0,3).map(oid => {
+    const ownersHtml = (t.owners||[]).slice(0,4).map(oid => {
       const m = state.members.find(x => x.id===oid);
       return m ? `<div class="owner-chip" title="${escapeHtml(m.name)}">${initials(m.name)}</div>` : '';
     }).join('');
-    const moreOwners = (t.owners||[]).length > 3 ? `<div class="owner-chip">+${t.owners.length-3}</div>` : '';
+    const moreOwners = (t.owners||[]).length > 4 ? `<div class="owner-chip">+${t.owners.length-4}</div>` : '';
     const statusInfo = {
       todo: ['status-todo', '대기'],
       progress: ['status-progress', '진행'],
