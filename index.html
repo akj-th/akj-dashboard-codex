@@ -123,9 +123,30 @@ html,body{font-family:'Pretendard',-apple-system,sans-serif;background:var(--g05
 .gantt-bar.completed::before{content:'✓ ';}
 .gantt-bar.in-progress{}
 .gantt-bar.in-progress::after{content:'';position:absolute;left:0;top:0;bottom:0;background:rgba(255,255,255,0.25);width:var(--progress,0%);}
-.subtask-bar{top:8px;bottom:8px;font-size:9px;background:#8b9bb4;color:var(--white);opacity:.9;box-shadow:none;}
-.subtask-bar::after{content:'';position:absolute;left:0;top:0;bottom:0;background:rgba(255,255,255,0.35);width:var(--progress,0%);}
-.subtask-check-marker{position:absolute;top:50%;width:16px;height:16px;border-radius:50%;background:#16a34a;color:var(--white);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;transform:translate(-50%,-50%);box-shadow:0 0 0 2px var(--white);}
+
+/* ===== 서브태스크 바 새 디자인 (o ——— ●) ===== */
+.subtask-bar{position:absolute;top:50%;transform:translateY(-50%);display:flex;align-items:center;cursor:pointer;z-index:2;height:20px;}
+.subtask-bar:hover{z-index:3;}
+.subtask-bar.selected{z-index:4;outline:2px solid #2563eb;outline-offset:3px;border-radius:6px;}
+.subtask-bar.dragging{transition:none;z-index:5;}
+.subtask-dot{border-radius:50%;flex-shrink:0;}
+.subtask-dot.start-dot{width:8px;height:8px;border:2px solid;background:var(--white);}
+.subtask-dot.end-dot{width:10px;height:10px;display:flex;align-items:center;justify-content:center;color:var(--white);font-size:7px;font-weight:700;}
+.subtask-connector{flex:1;height:2px;min-width:4px;}
+.subtask-handle{position:absolute;top:0;bottom:0;width:8px;opacity:0;cursor:ew-resize;}
+.subtask-handle.left{left:0;}
+.subtask-handle.right{right:0;}
+/* 완료 체크 마커 — phase 색상 사용 */
+.subtask-check-marker{position:absolute;top:50%;width:16px;height:16px;border-radius:50%;color:var(--white);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;transform:translate(-50%,-50%);box-shadow:0 0 0 2px var(--white);}
+
+/* ===== 드래그 핸들 ===== */
+.drag-handle{cursor:grab;color:var(--g4);font-size:13px;user-select:none;text-align:center;padding:0 4px;flex-shrink:0;}
+.drag-handle:active{cursor:grabbing;}
+/* 드롭 인디케이터 */
+.task-drag-above{box-shadow:inset 0 2px 0 0 var(--p1);}
+.task-drag-below{box-shadow:inset 0 -2px 0 0 var(--p1);}
+.subtask-drag-above{border-top:2px solid var(--p1)!important;}
+.subtask-drag-below{border-bottom:2px solid var(--p1)!important;}
 
 .gantt-milestone{position:absolute;top:50%;width:9px;height:9px;background:var(--black);transform:translate(-50%,-50%) rotate(45deg);box-shadow:0 0 0 1px var(--white);cursor:pointer;z-index:2;}
 .gantt-milestone.critical{background:var(--red);}
@@ -337,6 +358,7 @@ html,body{font-family:'Pretendard',-apple-system,sans-serif;background:var(--g05
     <table class="task-table">
       <thead>
         <tr>
+          <th style="width:28px"></th>
           <th style="width:80px">단계</th>
           <th>작업명</th>
           <th style="width:130px">기간</th>
@@ -530,8 +552,16 @@ const DEFAULT_CHECKLIST = {
 // ============ STATE ============
 let state = loadState();
 let selectedPeriod = null;
+let selectedSubtask = null;    // {taskId, subtaskId} — 선택된 서브태스크 바
 let dragState = null;
+let subtaskDragState = null;   // 서브태스크 바 드래그 상태
 let focusTaskNameOnRender = false;
+// 작업 목록 행 드래그 상태
+let taskDragInfo = {draggedId:null, overTaskId:null, overPos:null};
+let taskTouchDragState = null;
+// 서브태스크 사이드바 드래그 상태
+let subtaskDragInfo = {taskId:null, draggedId:null, overSubtaskId:null, overPos:null};
+let subtaskTouchDragState = null;
 
 function defaultState() {
   return {
@@ -679,7 +709,10 @@ function phaseBounds(phaseNum) {
   };
 }
 function syncTaskStatus(t) {
-  syncTaskStatus(t);
+  const prog = taskProgress(t);
+  if (prog >= 100) t.status = 'done';
+  else if (prog > 0 && t.status === 'todo') t.status = 'progress';
+  else if (prog === 0 && t.status === 'progress') t.status = 'todo';
 }
 function isDueSoon(t) {
   const today = todayStr();
@@ -842,15 +875,30 @@ function renderGanttSubtaskRows(task, days, today) {
     if (st.type === 'period' && st.start && st.end) {
       const startOffset = daysBetween(PROJECT_START, st.start);
       const duration = daysBetween(st.start, st.end) + 1;
-      visual = `<div class="gantt-bar subtask-bar" style="left:${(startOffset / days) * 100}%;width:${(duration / days) * 100}%;background:${phaseColor};--progress:${Math.max(0, Math.min(100, Number(st.progress || 0)))}%">${escapeHtml(st.text)}</div>`;
+      const isSelected = selectedSubtask && selectedSubtask.taskId === task.id && selectedSubtask.subtaskId === st.id;
+      // o ———— ● 디자인
+      visual = `<div class="subtask-bar${isSelected ? ' selected' : ''}"
+          data-task-id="${task.id}" data-subtask-id="${st.id}"
+          style="left:${(startOffset/days)*100}%;width:${(duration/days)*100}%"
+          onclick="selectSubtaskBar(event,'${task.id}','${st.id}')"
+          onmousedown="startSubtaskDrag(event,'${task.id}','${st.id}','move')"
+          onmouseenter="showSubtaskTooltip(event,'${task.id}','${st.id}')"
+          onmouseleave="hideTooltip()">
+        <span class="subtask-handle left" onmousedown="startSubtaskDrag(event,'${task.id}','${st.id}','start')"></span>
+        <span class="subtask-dot start-dot" style="border-color:${phaseColor}"></span>
+        <span class="subtask-connector" style="background:${phaseColor}"></span>
+        <span class="subtask-dot end-dot" style="background:${phaseColor}">✓</span>
+        <span class="subtask-handle right" onmousedown="startSubtaskDrag(event,'${task.id}','${st.id}','end')"></span>
+      </div>`;
     } else if (st.type !== 'period' && st.done && st.doneDate) {
       const offset = daysBetween(PROJECT_START, st.doneDate);
-      visual = `<div class="subtask-check-marker" style="left:${(offset / days) * 100 + (50 / days)}%">✓</div>`;
+      // 완료 체크마커 — phase 색상
+      visual = `<div class="subtask-check-marker" style="left:${(offset/days)*100+(50/days)}%;background:${phaseColor}">✓</div>`;
     }
     return `
     <div class="gantt-row subtask-row">
       <div class="gantt-task-info" style="padding-left:42px">
-        ${st.id === 'empty' ? '' : `<input type="checkbox" ${st.done?'checked':''} onclick="toggleSubtask('${task.id}', '${st.id}')">`}
+        ${st.id === 'empty' ? '' : `<input type="checkbox" ${st.done?'checked':''} onclick="toggleSubtask('${task.id}','${st.id}')">`}
         <span class="gantt-subtask-text ${st.done?'done':(st.type !== 'period' ? 'pending' : '')}">${escapeHtml(st.text)}</span>
       </div>
       <div class="gantt-timeline">${buildDayCells(days, today)}${visual}</div>
@@ -881,10 +929,84 @@ function toggleTaskExpanded(event, taskId) {
 function selectPeriod(event, taskId, periodId) {
   event.stopPropagation();
   selectedPeriod = {taskId, periodId};
+  selectedSubtask = null; // 서브태스크 선택 해제
   state.selectedTaskId = taskId;
   state.activeTab = 'task';
   saveState();
   selectTask(taskId);
+}
+
+// ===== 서브태스크 바 선택 =====
+function selectSubtaskBar(event, taskId, subtaskId) {
+  event.stopPropagation();
+  selectedSubtask = {taskId, subtaskId};
+  selectedPeriod = null; // 기간 선택 해제
+  renderGantt();
+}
+
+// ===== 서브태스크 바 드래그 (항목 1·4) =====
+function startSubtaskDrag(event, taskId, subtaskId, mode) {
+  event.stopPropagation();
+  const task = state.tasks.find(t => t.id === taskId);
+  const st = task && task.subtasks.find(s => s.id === subtaskId);
+  if (!task || !st) return;
+  // 선택 상태에서만 드래그 가능
+  const isSelected = selectedSubtask && selectedSubtask.taskId === taskId && selectedSubtask.subtaskId === subtaskId;
+  if (!isSelected) return;
+  const timeline = event.currentTarget.closest('.gantt-timeline');
+  if (!timeline) return;
+  subtaskDragState = {
+    taskId, subtaskId, mode,
+    startX: event.clientX,
+    originalStart: st.start,
+    originalEnd: st.end,
+    dayWidth: timeline.getBoundingClientRect().width / (daysBetween(PROJECT_START, PROJECT_END) + 1),
+  };
+  const bar = document.querySelector(`.subtask-bar[data-task-id="${taskId}"][data-subtask-id="${subtaskId}"]`);
+  if (bar) bar.classList.add('dragging');
+  document.addEventListener('mousemove', onSubtaskDrag);
+  document.addEventListener('mouseup', endSubtaskDrag);
+}
+
+function onSubtaskDrag(event) {
+  if (!subtaskDragState) return;
+  const task = state.tasks.find(t => t.id === subtaskDragState.taskId);
+  const st = task && task.subtasks.find(s => s.id === subtaskDragState.subtaskId);
+  if (!st) return;
+  const deltaDays = Math.round((event.clientX - subtaskDragState.startX) / subtaskDragState.dayWidth);
+  if (subtaskDragState.mode === 'move') {
+    st.start = addDays(subtaskDragState.originalStart, deltaDays);
+    st.end = addDays(subtaskDragState.originalEnd, deltaDays);
+  } else if (subtaskDragState.mode === 'start') {
+    const nextStart = addDays(subtaskDragState.originalStart, deltaDays);
+    if (daysBetween(nextStart, st.end) >= 0) st.start = nextStart;
+  } else {
+    const nextEnd = addDays(subtaskDragState.originalEnd, deltaDays);
+    if (daysBetween(st.start, nextEnd) >= 0) st.end = nextEnd;
+  }
+  showDragTooltip(event, st.start, st.end);
+  renderGantt();
+}
+
+function endSubtaskDrag() {
+  if (!subtaskDragState) return;
+  subtaskDragState = null;
+  document.removeEventListener('mousemove', onSubtaskDrag);
+  document.removeEventListener('mouseup', endSubtaskDrag);
+  hideTooltip();
+  saveState();
+  renderAll();
+}
+
+function showSubtaskTooltip(e, taskId, subtaskId) {
+  const task = state.tasks.find(x => x.id === taskId);
+  if (!task) return;
+  const st = task.subtasks.find(x => x.id === subtaskId);
+  if (!st) return;
+  const tip = document.getElementById('tooltip');
+  tip.innerHTML = `<b>${escapeHtml(st.text)}</b><br>${st.start} → ${st.end}`;
+  positionTooltip(e);
+  tip.classList.add('show');
 }
 
 function startPeriodDrag(event, taskId, periodId, mode) {
@@ -974,11 +1096,13 @@ document.addEventListener('mousemove', e => {
   if (tip.classList.contains('show') && !dragState) positionTooltip(e);
 });
 document.addEventListener('click', e => {
-  if (!isAuthed() || !selectedPeriod) return;
-  if (!e.target.closest('.gantt-bar')) {
-    selectedPeriod = null;
-    renderGantt();
-  }
+  if (!isAuthed()) return;
+  const clickedGanttBar = e.target.closest('.gantt-bar');
+  const clickedSubtaskBar = e.target.closest('.subtask-bar');
+  let changed = false;
+  if (selectedPeriod && !clickedGanttBar) { selectedPeriod = null; changed = true; }
+  if (selectedSubtask && !clickedSubtaskBar) { selectedSubtask = null; changed = true; }
+  if (changed) renderGantt();
 });
 document.addEventListener('keydown', e => {
   const tag = (e.target && e.target.tagName || '').toLowerCase();
@@ -1031,7 +1155,15 @@ function renderTaskList() {
     const selected = state.selectedTaskId === t.id ? 'selected' : '';
     const dueSoon = isDueSoon(t) ? 'due-soon' : '';
     const bounds = taskPeriodBounds(t);
-    return `<tr class="${selected} ${dueSoon}" onclick="selectTask('${t.id}')">
+    return `<tr class="${selected} ${dueSoon}" data-task-id="${t.id}"
+      onclick="selectTask('${t.id}')"
+      onmousedown="onTaskRowMouseDown(event,'${t.id}')"
+      ondragstart="onTaskDragStart(event,'${t.id}')"
+      ondragover="onTaskDragOver(event,'${t.id}')"
+      ondragleave="onTaskDragLeave(event)"
+      ondrop="onTaskDrop(event,'${t.id}')"
+      ondragend="onTaskDragEnd(event,'${t.id}')">
+      <td class="drag-handle" ontouchstart="onTaskHandleTouchStart(event,'${t.id}')" title="드래그하여 순서 변경">⠿</td>
       <td><span class="phase-tag p${t.phase}">P${t.phase}</span></td>
       <td style="font-weight:500">${isDueSoon(t)?'🔴 ':''}${escapeHtml(t.name)}</td>
       <td style="color:var(--g6);font-size:11px">${bounds.start.substring(5)} ~ ${bounds.end.substring(5)}</td>
@@ -1151,28 +1283,38 @@ function renderTaskDetail() {
   const subtaskItems = (t.subtasks || []).map(st => {
     const isPeriod = st.type === 'period';
     return `
-    <div class="subtask-edit-item ${st.done?'done':''}" style="align-items:flex-start">
-      <input type="checkbox" ${st.done?'checked':''} onchange="toggleSubtask('${t.id}', '${st.id}')" style="margin-top:7px">
+    <div class="subtask-edit-item ${st.done?'done':''}" style="align-items:flex-start"
+      data-subtask-id="${st.id}"
+      ondragstart="onSubtaskItemDragStart(event,'${t.id}','${st.id}')"
+      ondragover="onSubtaskItemDragOver(event,'${t.id}','${st.id}')"
+      ondragleave="onSubtaskItemDragLeave(event)"
+      ondrop="onSubtaskItemDrop(event,'${t.id}','${st.id}')"
+      ondragend="onSubtaskItemDragEnd('${t.id}')">
+      <span class="drag-handle"
+        onmousedown="onSubtaskHandleMouseDown(event,'${t.id}','${st.id}')"
+        ontouchstart="onSubtaskHandleTouchStart(event,'${t.id}','${st.id}')"
+        title="드래그하여 순서 변경">⠿</span>
+      <input type="checkbox" ${st.done?'checked':''} onchange="toggleSubtask('${t.id}','${st.id}')" style="margin-top:7px">
       <div style="flex:1;min-width:0">
-        <input class="subtask-input" value="${escapeHtml(st.text)}" onchange="updateSubtaskText('${t.id}', '${st.id}', this.value)">
+        <input class="subtask-input" value="${escapeHtml(st.text)}" onchange="updateSubtaskText('${t.id}','${st.id}',this.value)">
         ${isPeriod ? `
           <div class="detail-row" style="margin-top:6px">
-            <input class="detail-input" type="date" value="${st.start || ''}" onchange="updateSubtaskField('${t.id}', '${st.id}', 'start', this.value)">
-            <input class="detail-input" type="date" value="${st.end || ''}" onchange="updateSubtaskField('${t.id}', '${st.id}', 'end', this.value)">
+            <input class="detail-input" type="date" value="${st.start || ''}" onchange="updateSubtaskField('${t.id}','${st.id}','start',this.value)">
+            <input class="detail-input" type="date" value="${st.end || ''}" onchange="updateSubtaskField('${t.id}','${st.id}','end',this.value)">
           </div>
           <div class="progress-input" style="margin-top:6px">
-            <input type="range" min="0" max="100" step="5" value="${st.progress || 0}" oninput="updateSubtaskField('${t.id}', '${st.id}', 'progress', parseInt(this.value)||0)">
-            <input type="number" min="0" max="100" value="${st.progress || 0}" onchange="updateSubtaskField('${t.id}', '${st.id}', 'progress', parseInt(this.value)||0)">
+            <input type="range" min="0" max="100" step="5" value="${st.progress || 0}" oninput="updateSubtaskField('${t.id}','${st.id}','progress',parseInt(this.value)||0)">
+            <input type="number" min="0" max="100" value="${st.progress || 0}" onchange="updateSubtaskField('${t.id}','${st.id}','progress',parseInt(this.value)||0)">
           </div>
-          <button class="btn btn-sm" style="margin-top:6px" onclick="setSubtaskType('${t.id}', '${st.id}', 'check')">체크형으로 전환</button>
+          <button class="btn btn-sm" style="margin-top:6px" onclick="setSubtaskType('${t.id}','${st.id}','check')">체크형으로 전환</button>
         ` : `
           <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
-            ${st.done ? `<input class="detail-input" style="width:140px" type="date" value="${st.doneDate || todayStr()}" onchange="updateSubtaskField('${t.id}', '${st.id}', 'doneDate', this.value)">` : '<span style="font-size:11px;color:var(--g4)">미완료</span>'}
-            <button class="btn btn-sm" onclick="setSubtaskType('${t.id}', '${st.id}', 'period')">기간 설정</button>
+            ${st.done ? `<input class="detail-input" style="width:140px" type="date" value="${st.doneDate || todayStr()}" onchange="updateSubtaskField('${t.id}','${st.id}','doneDate',this.value)">` : '<span style="font-size:11px;color:var(--g4)">미완료</span>'}
+            <button class="btn btn-sm" onclick="setSubtaskType('${t.id}','${st.id}','period')">기간 설정</button>
           </div>
         `}
       </div>
-      <button class="subtask-remove" title="삭제" onclick="removeSubtask('${t.id}', '${st.id}')">×</button>
+      <button class="subtask-remove" title="삭제" onclick="removeSubtask('${t.id}','${st.id}')">×</button>
     </div>`;
   }).join('');
   container.innerHTML = `
@@ -1292,7 +1434,10 @@ function addPeriod(taskId) {
   const start = addDays(lastEnd, 1);
   t.periods.push({id:'p'+Date.now(), start, end:addDays(start, 2)});
   saveState();
-  renderAll();
+  // 즉각 반영: 필요한 렌더만 직접 호출
+  renderTaskDetail();
+  renderGantt();
+  renderKPI();
 }
 
 function removePeriod(taskId, periodId) {
@@ -1583,6 +1728,234 @@ function renderEventBanner() {
   }
   banner.innerHTML = events.map(m => `📅 오늘 — ${escapeHtml(m.label)} · ${m.date}${m.time ? ' ' + escapeHtml(m.time) : ''}`).join(' · ');
   banner.classList.add('show');
+}
+
+// ============ 작업 목록 드래그 순서 변경 (항목 5) ============
+
+function onTaskRowMouseDown(event, taskId) {
+  // 핸들 영역에서만 draggable 활성화
+  const row = event.currentTarget;
+  if (event.target.closest('.drag-handle')) {
+    row.setAttribute('draggable', 'true');
+  } else {
+    row.removeAttribute('draggable');
+  }
+}
+
+function onTaskDragStart(event, taskId) {
+  taskDragInfo.draggedId = taskId;
+  event.dataTransfer.effectAllowed = 'move';
+  event.dataTransfer.setData('text/plain', taskId);
+  setTimeout(() => {
+    const row = document.querySelector(`tr[data-task-id="${taskId}"]`);
+    if (row) row.style.opacity = '0.4';
+  }, 0);
+}
+
+function onTaskDragOver(event, taskId) {
+  event.preventDefault();
+  if (taskId === taskDragInfo.draggedId) return;
+  event.dataTransfer.dropEffect = 'move';
+  const row = event.currentTarget;
+  const rect = row.getBoundingClientRect();
+  const pos = event.clientY < rect.top + rect.height / 2 ? 'before' : 'after';
+  document.querySelectorAll('.task-drag-above, .task-drag-below').forEach(el =>
+    el.classList.remove('task-drag-above', 'task-drag-below'));
+  row.classList.add(pos === 'before' ? 'task-drag-above' : 'task-drag-below');
+  taskDragInfo.overTaskId = taskId;
+  taskDragInfo.overPos = pos;
+}
+
+function onTaskDragLeave(event) {
+  const row = event.currentTarget;
+  if (!row.contains(event.relatedTarget)) {
+    row.classList.remove('task-drag-above', 'task-drag-below');
+  }
+}
+
+function onTaskDrop(event, taskId) {
+  event.preventDefault();
+  if (taskDragInfo.draggedId && taskDragInfo.overTaskId) {
+    reorderTasks(taskDragInfo.draggedId, taskDragInfo.overTaskId, taskDragInfo.overPos || 'after');
+  }
+}
+
+function onTaskDragEnd(event, taskId) {
+  document.querySelectorAll('.task-drag-above, .task-drag-below').forEach(el =>
+    el.classList.remove('task-drag-above', 'task-drag-below'));
+  document.querySelectorAll('tr[data-task-id]').forEach(el => {
+    el.style.opacity = '';
+    el.removeAttribute('draggable');
+  });
+  taskDragInfo.draggedId = null;
+  taskDragInfo.overTaskId = null;
+  taskDragInfo.overPos = null;
+}
+
+function reorderTasks(draggedId, targetId, position) {
+  const tasks = state.tasks;
+  const dragIdx = tasks.findIndex(t => t.id === draggedId);
+  const targetIdx = tasks.findIndex(t => t.id === targetId);
+  if (dragIdx < 0 || targetIdx < 0 || dragIdx === targetIdx) return;
+  const [dragged] = tasks.splice(dragIdx, 1);
+  const newTargetIdx = tasks.findIndex(t => t.id === targetId);
+  tasks.splice(position === 'before' ? newTargetIdx : newTargetIdx + 1, 0, dragged);
+  saveState();
+  renderAll();
+}
+
+// 작업 목록 터치 드래그
+function onTaskHandleTouchStart(event, taskId) {
+  event.preventDefault();
+  const touch = event.touches[0];
+  taskTouchDragState = {taskId, overTaskId:null, overPos:null};
+  const row = event.currentTarget.closest('tr');
+  if (row) row.style.opacity = '0.4';
+  document.addEventListener('touchmove', onTaskHandleTouchMove, {passive:false});
+  document.addEventListener('touchend', onTaskHandleTouchEnd);
+}
+
+function onTaskHandleTouchMove(event) {
+  event.preventDefault();
+  if (!taskTouchDragState) return;
+  const touch = event.touches[0];
+  const el = document.elementFromPoint(touch.clientX, touch.clientY);
+  const row = el && el.closest('tr[data-task-id]');
+  if (!row) return;
+  const targetId = row.dataset.taskId;
+  if (!targetId || targetId === taskTouchDragState.taskId) return;
+  const rect = row.getBoundingClientRect();
+  const pos = touch.clientY < rect.top + rect.height / 2 ? 'before' : 'after';
+  document.querySelectorAll('.task-drag-above, .task-drag-below').forEach(el =>
+    el.classList.remove('task-drag-above', 'task-drag-below'));
+  row.classList.add(pos === 'before' ? 'task-drag-above' : 'task-drag-below');
+  taskTouchDragState.overTaskId = targetId;
+  taskTouchDragState.overPos = pos;
+}
+
+function onTaskHandleTouchEnd(event) {
+  document.removeEventListener('touchmove', onTaskHandleTouchMove);
+  document.removeEventListener('touchend', onTaskHandleTouchEnd);
+  document.querySelectorAll('.task-drag-above, .task-drag-below').forEach(el =>
+    el.classList.remove('task-drag-above', 'task-drag-below'));
+  document.querySelectorAll('tr[data-task-id]').forEach(el => { el.style.opacity = ''; });
+  if (taskTouchDragState && taskTouchDragState.overTaskId) {
+    reorderTasks(taskTouchDragState.taskId, taskTouchDragState.overTaskId, taskTouchDragState.overPos || 'after');
+  }
+  taskTouchDragState = null;
+}
+
+// ============ 사이드바 서브태스크 드래그 순서 변경 (항목 6) ============
+
+function onSubtaskHandleMouseDown(event, taskId, subtaskId) {
+  const item = event.currentTarget.closest('.subtask-edit-item');
+  if (item) item.setAttribute('draggable', 'true');
+}
+
+function onSubtaskItemDragStart(event, taskId, subtaskId) {
+  subtaskDragInfo.taskId = taskId;
+  subtaskDragInfo.draggedId = subtaskId;
+  event.dataTransfer.effectAllowed = 'move';
+  setTimeout(() => {
+    const el = document.querySelector(`.subtask-edit-item[data-subtask-id="${subtaskId}"]`);
+    if (el) el.style.opacity = '0.4';
+  }, 0);
+}
+
+function onSubtaskItemDragOver(event, taskId, subtaskId) {
+  event.preventDefault();
+  if (subtaskId === subtaskDragInfo.draggedId) return;
+  if (taskId !== subtaskDragInfo.taskId) return; // 같은 작업 내에서만
+  const item = event.currentTarget;
+  const rect = item.getBoundingClientRect();
+  const pos = event.clientY < rect.top + rect.height / 2 ? 'before' : 'after';
+  document.querySelectorAll('.subtask-drag-above, .subtask-drag-below').forEach(el =>
+    el.classList.remove('subtask-drag-above', 'subtask-drag-below'));
+  item.classList.add(pos === 'before' ? 'subtask-drag-above' : 'subtask-drag-below');
+  subtaskDragInfo.overSubtaskId = subtaskId;
+  subtaskDragInfo.overPos = pos;
+}
+
+function onSubtaskItemDragLeave(event) {
+  const item = event.currentTarget;
+  if (!item.contains(event.relatedTarget)) {
+    item.classList.remove('subtask-drag-above', 'subtask-drag-below');
+  }
+}
+
+function onSubtaskItemDrop(event, taskId, subtaskId) {
+  event.preventDefault();
+  if (subtaskDragInfo.draggedId && subtaskDragInfo.overSubtaskId && taskId === subtaskDragInfo.taskId) {
+    reorderSubtasks(taskId, subtaskDragInfo.draggedId, subtaskDragInfo.overSubtaskId, subtaskDragInfo.overPos || 'after');
+  }
+}
+
+function onSubtaskItemDragEnd(taskId) {
+  document.querySelectorAll('.subtask-drag-above, .subtask-drag-below').forEach(el =>
+    el.classList.remove('subtask-drag-above', 'subtask-drag-below'));
+  document.querySelectorAll('.subtask-edit-item').forEach(el => {
+    el.style.opacity = '';
+    el.setAttribute('draggable', 'false');
+  });
+  subtaskDragInfo.taskId = null;
+  subtaskDragInfo.draggedId = null;
+  subtaskDragInfo.overSubtaskId = null;
+  subtaskDragInfo.overPos = null;
+}
+
+function reorderSubtasks(taskId, draggedId, targetId, position) {
+  const task = state.tasks.find(t => t.id === taskId);
+  if (!task) return;
+  const subtasks = task.subtasks;
+  const dragIdx = subtasks.findIndex(s => s.id === draggedId);
+  const targetIdx = subtasks.findIndex(s => s.id === targetId);
+  if (dragIdx < 0 || targetIdx < 0 || dragIdx === targetIdx) return;
+  const [dragged] = subtasks.splice(dragIdx, 1);
+  const newTargetIdx = subtasks.findIndex(s => s.id === targetId);
+  subtasks.splice(position === 'before' ? newTargetIdx : newTargetIdx + 1, 0, dragged);
+  saveState();
+  renderTaskDetail();
+}
+
+// 서브태스크 터치 드래그
+function onSubtaskHandleTouchStart(event, taskId, subtaskId) {
+  event.preventDefault();
+  subtaskTouchDragState = {taskId, subtaskId, overSubtaskId:null, overPos:null};
+  const item = event.currentTarget.closest('.subtask-edit-item');
+  if (item) item.style.opacity = '0.4';
+  document.addEventListener('touchmove', onSubtaskHandleTouchMove, {passive:false});
+  document.addEventListener('touchend', onSubtaskHandleTouchEnd);
+}
+
+function onSubtaskHandleTouchMove(event) {
+  event.preventDefault();
+  if (!subtaskTouchDragState) return;
+  const touch = event.touches[0];
+  const el = document.elementFromPoint(touch.clientX, touch.clientY);
+  const item = el && el.closest('.subtask-edit-item');
+  if (!item) return;
+  const targetId = item.dataset.subtaskId;
+  if (!targetId || targetId === subtaskTouchDragState.subtaskId) return;
+  const rect = item.getBoundingClientRect();
+  const pos = touch.clientY < rect.top + rect.height / 2 ? 'before' : 'after';
+  document.querySelectorAll('.subtask-drag-above, .subtask-drag-below').forEach(el =>
+    el.classList.remove('subtask-drag-above', 'subtask-drag-below'));
+  item.classList.add(pos === 'before' ? 'subtask-drag-above' : 'subtask-drag-below');
+  subtaskTouchDragState.overSubtaskId = targetId;
+  subtaskTouchDragState.overPos = pos;
+}
+
+function onSubtaskHandleTouchEnd(event) {
+  document.removeEventListener('touchmove', onSubtaskHandleTouchMove);
+  document.removeEventListener('touchend', onSubtaskHandleTouchEnd);
+  document.querySelectorAll('.subtask-drag-above, .subtask-drag-below').forEach(el =>
+    el.classList.remove('subtask-drag-above', 'subtask-drag-below'));
+  document.querySelectorAll('.subtask-edit-item').forEach(el => { el.style.opacity = ''; });
+  if (subtaskTouchDragState && subtaskTouchDragState.overSubtaskId) {
+    reorderSubtasks(subtaskTouchDragState.taskId, subtaskTouchDragState.subtaskId,
+      subtaskTouchDragState.overSubtaskId, subtaskTouchDragState.overPos || 'after');
+  }
+  subtaskTouchDragState = null;
 }
 
 // ============ MAIN ============
