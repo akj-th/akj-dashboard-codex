@@ -51,7 +51,20 @@ html,body{font-family:'Pretendard',-apple-system,sans-serif;background:var(--g05
 
 .main{flex:1;display:flex;overflow:hidden;}
 .content{flex:1;overflow-y:auto;padding:24px;}
-.sidebar{width:380px;background:var(--white);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;}
+.sidebar{width:380px;background:var(--white);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;transition:width .18s;overflow:hidden;}
+.sidebar.collapsed{width:36px;}
+.sidebar-topbar{height:40px;display:flex;align-items:center;justify-content:flex-end;padding:0 6px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.sidebar.collapsed .sidebar-topbar{justify-content:center;}
+.sidebar-toggle-btn{width:24px;height:24px;border:1px solid var(--border);background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--g5);flex-shrink:0;font-family:inherit;}
+.sidebar-toggle-btn:hover{border-color:var(--g4);color:var(--black);}
+.sidebar-body{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;}
+.sidebar.collapsed .sidebar-body{display:none;}
+/* 간트차트 행 드래그 핸들 */
+.gantt-row-handle{cursor:grab;color:var(--g4);font-size:12px;padding:0 2px;flex-shrink:0;user-select:none;opacity:0;transition:opacity .1s;}
+.gantt-row:hover .gantt-row-handle{opacity:1;}
+.gantt-row-handle:active{cursor:grabbing;}
+.gantt-drag-above{box-shadow:inset 0 2px 0 0 var(--p1);}
+.gantt-drag-below{box-shadow:inset 0 -2px 0 0 var(--p1);}
 
 /* ===== KPI ROW ===== */
 .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;}
@@ -377,27 +390,32 @@ html,body{font-family:'Pretendard',-apple-system,sans-serif;background:var(--g05
 </div>
 
 <!-- SIDEBAR -->
-<aside class="sidebar">
-  <div class="tabs">
-    <button class="tab active" data-tab="team" onclick="switchTab('team')">팀<span class="tab-count" id="tab-count-team">0</span></button>
-    <button class="tab" data-tab="task" onclick="switchTab('task')">작업</button>
-    <button class="tab" data-tab="check" onclick="switchTab('check')">체크리스트<span class="tab-count" id="tab-count-check">0</span></button>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-topbar">
+    <button class="sidebar-toggle-btn" id="sidebar-toggle-btn" onclick="toggleSidebar()" title="사이드바 접기">◀</button>
   </div>
+  <div class="sidebar-body">
+    <div class="tabs">
+      <button class="tab active" data-tab="team" onclick="switchTab('team')">팀<span class="tab-count" id="tab-count-team">0</span></button>
+      <button class="tab" data-tab="task" onclick="switchTab('task')">작업</button>
+      <button class="tab" data-tab="check" onclick="switchTab('check')">체크리스트<span class="tab-count" id="tab-count-check">0</span></button>
+    </div>
 
-  <!-- TEAM TAB -->
-  <div class="tab-content" id="tab-team">
-    <button class="team-add" onclick="addMember()">+ 팀원 추가</button>
-    <div id="members-list"></div>
-  </div>
+    <!-- TEAM TAB -->
+    <div class="tab-content" id="tab-team">
+      <button class="team-add" onclick="addMember()">+ 팀원 추가</button>
+      <div id="members-list"></div>
+    </div>
 
-  <!-- TASK DETAIL TAB -->
-  <div class="tab-content" id="tab-task" style="display:none;">
-    <div id="task-detail"></div>
-  </div>
+    <!-- TASK DETAIL TAB -->
+    <div class="tab-content" id="tab-task" style="display:none;">
+      <div id="task-detail"></div>
+    </div>
 
-  <!-- CHECKLIST TAB -->
-  <div class="tab-content" id="tab-check" style="display:none;">
-    <div id="checklist-container"></div>
+    <!-- CHECKLIST TAB -->
+    <div class="tab-content" id="tab-check" style="display:none;">
+      <div id="checklist-container"></div>
+    </div>
   </div>
 </aside>
 
@@ -615,6 +633,7 @@ function migrateState(data) {
   }));
   next.checklist = next.checklist || JSON.parse(JSON.stringify(DEFAULT_CHECKLIST));
   next.expandedTasks = next.expandedTasks || {};
+  next.sidebarCollapsed = !!next.sidebarCollapsed;
   next.filters = Object.assign({phase:'all', status:'all', owner:'all', unassigned:false, dueSoon:false, query:''}, next.filters || {});
   if (next.selectedTaskId && !next.tasks.some(t => t.id === next.selectedTaskId)) next.selectedTaskId = null;
   return next;
@@ -798,11 +817,11 @@ function renderGantt() {
   let taskRows = '';
   state.tasks.forEach(task => {
     const phaseColor = `var(--p${task.phase})`;
-    const ownersHtml = (task.owners||[]).slice(0,3).map(oid => {
+    const ownersHtml = (task.owners||[]).slice(0,4).map(oid => {
       const m = state.members.find(x => x.id===oid);
       return m ? `<div class="owner-chip" style="background:${m.color || memberColor(m.id)}" title="${escapeHtml(m.name)}">${initials(m.name)}</div>` : '';
     }).join('');
-    const moreOwners = (task.owners||[]).length > 3 ? `<div class="owner-chip" style="background:var(--g5)">+${task.owners.length-3}</div>` : '';
+    const moreOwners = (task.owners||[]).length > 4 ? `<div class="owner-chip" style="background:var(--g5)">+${task.owners.length-4}</div>` : '';
     const statusClass = task.status==='done' ? 'completed' : (task.status==='progress' ? 'in-progress' : '');
     const barLabel = task.name.length > 20 ? task.name.substring(0,18)+'…' : task.name;
     const prog = taskProgress(task);
@@ -825,8 +844,15 @@ function renderGantt() {
     }).join('');
 
     taskRows += `
-      <div class="gantt-row" data-task-id="${task.id}">
+      <div class="gantt-row" data-task-id="${task.id}"
+        onmousedown="onGanttRowMouseDown(event,'${task.id}')"
+        ondragstart="onGanttTaskDragStart(event,'${task.id}')"
+        ondragover="onGanttTaskDragOver(event,'${task.id}')"
+        ondragleave="onGanttTaskDragLeave(event)"
+        ondrop="onGanttTaskDrop(event,'${task.id}')"
+        ondragend="onGanttTaskDragEnd(event,'${task.id}')">
         <div class="gantt-task-info">
+          <span class="gantt-row-handle" ontouchstart="onGanttHandleTouchStart(event,'${task.id}')" title="드래그하여 순서 변경">⠿</span>
           <button class="gantt-toggle" onclick="toggleTaskExpanded(event, '${task.id}')">${expanded?'▼':'▶'}</button>
           <span class="phase-tag p${task.phase}">P${task.phase}</span>
           <span class="gantt-task-name" onclick="selectTask('${task.id}')">${escapeHtml(task.name)}</span>
@@ -1915,6 +1941,7 @@ function reorderSubtasks(taskId, draggedId, targetId, position) {
   subtasks.splice(position === 'before' ? newTargetIdx : newTargetIdx + 1, 0, dragged);
   saveState();
   renderTaskDetail();
+  renderGantt(); // 간트차트에도 순서 반영
 }
 
 // 서브태스크 터치 드래그
@@ -1958,6 +1985,122 @@ function onSubtaskHandleTouchEnd(event) {
   subtaskTouchDragState = null;
 }
 
+// ============ 간트차트 작업행 드래그 순서 변경 ============
+let ganttDragInfo = {draggedId:null, overTaskId:null, overPos:null};
+let ganttTouchDragState = null;
+
+function onGanttRowMouseDown(event, taskId) {
+  const row = event.currentTarget;
+  if (event.target.closest('.gantt-row-handle')) {
+    row.setAttribute('draggable', 'true');
+  } else {
+    row.removeAttribute('draggable');
+  }
+}
+
+function onGanttTaskDragStart(event, taskId) {
+  ganttDragInfo.draggedId = taskId;
+  event.dataTransfer.effectAllowed = 'move';
+  setTimeout(() => {
+    const row = document.querySelector(`.gantt-row[data-task-id="${taskId}"]`);
+    if (row) row.style.opacity = '0.4';
+  }, 0);
+}
+
+function onGanttTaskDragOver(event, taskId) {
+  event.preventDefault();
+  if (taskId === ganttDragInfo.draggedId) return;
+  event.dataTransfer.dropEffect = 'move';
+  const row = event.currentTarget;
+  const rect = row.getBoundingClientRect();
+  const pos = event.clientY < rect.top + rect.height / 2 ? 'before' : 'after';
+  document.querySelectorAll('.gantt-drag-above, .gantt-drag-below').forEach(el =>
+    el.classList.remove('gantt-drag-above', 'gantt-drag-below'));
+  row.classList.add(pos === 'before' ? 'gantt-drag-above' : 'gantt-drag-below');
+  ganttDragInfo.overTaskId = taskId;
+  ganttDragInfo.overPos = pos;
+}
+
+function onGanttTaskDragLeave(event) {
+  const row = event.currentTarget;
+  if (!row.contains(event.relatedTarget)) {
+    row.classList.remove('gantt-drag-above', 'gantt-drag-below');
+  }
+}
+
+function onGanttTaskDrop(event, taskId) {
+  event.preventDefault();
+  if (ganttDragInfo.draggedId && ganttDragInfo.overTaskId) {
+    reorderTasks(ganttDragInfo.draggedId, ganttDragInfo.overTaskId, ganttDragInfo.overPos || 'after');
+  }
+}
+
+function onGanttTaskDragEnd(event, taskId) {
+  document.querySelectorAll('.gantt-drag-above, .gantt-drag-below').forEach(el =>
+    el.classList.remove('gantt-drag-above', 'gantt-drag-below'));
+  document.querySelectorAll('.gantt-row[data-task-id]').forEach(el => {
+    el.style.opacity = '';
+    el.removeAttribute('draggable');
+  });
+  ganttDragInfo.draggedId = null;
+  ganttDragInfo.overTaskId = null;
+  ganttDragInfo.overPos = null;
+}
+
+function onGanttHandleTouchStart(event, taskId) {
+  event.preventDefault();
+  ganttTouchDragState = {taskId, overTaskId:null, overPos:null};
+  const row = event.currentTarget.closest('.gantt-row[data-task-id]');
+  if (row) row.style.opacity = '0.4';
+  document.addEventListener('touchmove', onGanttHandleTouchMove, {passive:false});
+  document.addEventListener('touchend', onGanttHandleTouchEnd);
+}
+
+function onGanttHandleTouchMove(event) {
+  event.preventDefault();
+  if (!ganttTouchDragState) return;
+  const touch = event.touches[0];
+  const el = document.elementFromPoint(touch.clientX, touch.clientY);
+  const row = el && el.closest('.gantt-row[data-task-id]');
+  if (!row) return;
+  const targetId = row.dataset.taskId;
+  if (!targetId || targetId === ganttTouchDragState.taskId) return;
+  const rect = row.getBoundingClientRect();
+  const pos = touch.clientY < rect.top + rect.height / 2 ? 'before' : 'after';
+  document.querySelectorAll('.gantt-drag-above, .gantt-drag-below').forEach(el =>
+    el.classList.remove('gantt-drag-above', 'gantt-drag-below'));
+  row.classList.add(pos === 'before' ? 'gantt-drag-above' : 'gantt-drag-below');
+  ganttTouchDragState.overTaskId = targetId;
+  ganttTouchDragState.overPos = pos;
+}
+
+function onGanttHandleTouchEnd(event) {
+  document.removeEventListener('touchmove', onGanttHandleTouchMove);
+  document.removeEventListener('touchend', onGanttHandleTouchEnd);
+  document.querySelectorAll('.gantt-drag-above, .gantt-drag-below').forEach(el =>
+    el.classList.remove('gantt-drag-above', 'gantt-drag-below'));
+  document.querySelectorAll('.gantt-row[data-task-id]').forEach(el => { el.style.opacity = ''; });
+  if (ganttTouchDragState && ganttTouchDragState.overTaskId) {
+    reorderTasks(ganttTouchDragState.taskId, ganttTouchDragState.overTaskId, ganttTouchDragState.overPos || 'after');
+  }
+  ganttTouchDragState = null;
+}
+
+// ============ 사이드바 접기/펼치기 ============
+function toggleSidebar() {
+  state.sidebarCollapsed = !state.sidebarCollapsed;
+  saveState();
+  applySidebarState();
+}
+
+function applySidebarState() {
+  const sidebar = document.getElementById('sidebar');
+  const btn = document.getElementById('sidebar-toggle-btn');
+  if (!sidebar) return;
+  sidebar.classList.toggle('collapsed', !!state.sidebarCollapsed);
+  if (btn) btn.textContent = state.sidebarCollapsed ? '▶' : '◀';
+}
+
 // ============ MAIN ============
 function renderAll() {
   if (!isAuthed()) {
@@ -1965,6 +2108,7 @@ function renderAll() {
     return;
   }
   applyAccessState();
+  applySidebarState();
   renderEventBanner();
   renderKPI();
   renderGantt();
